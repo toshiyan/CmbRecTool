@@ -1,6 +1,3 @@
-# RecTool
-Fortran Library for Reconstructing Anisotropic Fields from Cosmic Microwave Background
-
 This Library contains Fortran subroutines to reconstruct lensing potential, cosmic polarization rotation 
 from cosmic microwave background anisotropies (CMB). In flat sky analysis, verification of the source code is shown in 
 
