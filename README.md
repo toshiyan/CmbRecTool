@@ -1,4 +1,4 @@
-This Library contains Fortran subroutines to reconstruct lensing potential, cosmic polarization rotation 
+This Library contains Fortran subroutines to reconstruct lensing potential and cosmic polarization rotation 
 from cosmic microwave background anisotropies (CMB). In flat sky analysis, verification of the source code is shown in 
 
   - https://arxiv.org/abs/1209.0091 for the temperature lensing reconstruction, 
