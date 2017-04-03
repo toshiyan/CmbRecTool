@@ -14,6 +14,12 @@ from cosmic microwave background anisotropies (CMB).
   3) You will find the Library at "lib" and "mod" directories. 
 
 
+# Test
+
+You can test the library by using the example codes at "example" directory. At each subdirectory, you need to compile each code 
+by just typying "make" (you do need to edit each Makefile). 
+
+
 # References
 
 In flat sky analysis, verification of the source code is shown in 
