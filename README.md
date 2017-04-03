@@ -1,7 +1,18 @@
 # CmbRecTool
 
-This Library contains Fortran subroutines to reconstruct lensing potential and cosmic polarization rotation 
+This Library contains Fortran90 subroutines to reconstruct lensing potential and cosmic polarization rotation 
 from cosmic microwave background anisotropies (CMB). 
+
+# Install
+
+  0) The code assumes "ifort" (intel fortran compiler) as a fortran compiler. 
+
+  1) Go to "pub" directory, and install each pubclic package (FFTW, Healpix, LAPACK and cfitsio). 
+
+  2) Go to the top directory, and type "./MALEALL install". 
+  
+  3) You will find the Library at "lib" and "mod" directories. 
+
 
 # References
 
