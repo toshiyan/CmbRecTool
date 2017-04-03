@@ -15,6 +15,10 @@ In flat sky analysis, verification of the source code is shown in
 In full sky analysis, the library also support the subroutines for the lensing reconstruction and delensing as shown in 
 
   - https://arxiv.org/abs/1405.6568
+  
+
+The algorithm written in nldd/xxx.f90 is described in doc/note.pdf
+
 
 # Acknowledgment
 
