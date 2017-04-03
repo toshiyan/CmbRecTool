@@ -17,7 +17,8 @@ from cosmic microwave background anisotropies (CMB).
 # Test
 
 You can test the library by using the example codes at "example" directory. At each subdirectory, you need to compile each code 
-by just typying "make" (you do need to edit each Makefile). 
+by just typying "make" (you do need to edit each Makefile). Then you can run each code by "./exe" or "./exe params.ini" where exe is 
+an executable file. 
 
 
 # References
