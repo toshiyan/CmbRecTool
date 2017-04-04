@@ -87,8 +87,8 @@ subroutine AL_INTERFACE(rL,dL,fC,OC,Alg,Alc,QDO,itern)
   ! BB
   if (QDO(QBB))  call ALBB(rL,dL,Alg(QBB,:),Alc(QBB,:),fC(BB,:),OC(BB,:))
   ! EB
-  if(QDO(QEB)) then
-    if(present(itern)) then
+  if (QDO(QEB)) then
+    if (present(itern).and.itern>0) then
       allocate(AlgEB(dL(2)),rCBB(rL(2)));  AlgEB = 0d0;  rCBB=0d0
       ratio = 1d0
       rCBB = OC(BB,1:rL(2))
