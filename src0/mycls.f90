@@ -676,14 +676,30 @@ subroutine angle_average(nn,alm,Al,nmax,label,el)
 end subroutine angle_average
 
 
-subroutine readcl_camb(Cl,f,el,HasBB,rowCl)
+subroutine readcl_camb(Cl,f,eL,HasBB,rowCl)
+!* Read cls from a ascii file
+!* This routine assumes that the file is obtained by CAMB and contains 
+!*   l, TT, EE, TE, dd, Td, (Ed) 
+!* if hasbb = false (e.g., scalcls.dat), or 
+!*   l, TT, EE, BB, TE, (curl)
+!* if hasbb = true (e.g., lensedcls.dat). 
+!* For other cases, loadtxt is more convenient. 
+!* cls are assumed to be multipiled by l*(l+1)/2pi unless you specify rowCl
   implicit none 
-  !I/O
+!
+![input]
+! f : filename
+! eL : 
   character(*), intent(in) :: f
-  logical, intent(in), optional :: HasBB, rowCl
   integer, intent(in) :: eL(1:2)
   double precision, intent(out) :: Cl(:,:)
-  !internal
+!
+!(optional)
+! HasBB : file has BB spectrum at 4th column
+! rowCl : do not multiply, 2pi/l(l+1), to cls
+  logical, intent(in), optional :: HasBB, rowCl
+!
+![internal]
   double precision :: rC(1:10)
   integer :: i, l, n, m
 
