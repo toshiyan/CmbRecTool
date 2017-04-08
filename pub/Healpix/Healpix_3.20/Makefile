@@ -14,12 +14,12 @@ RM	= rm -f
 
 # ------------------------------ variables for F90 --------------------------
 HEALPIX	= /global/homes/t/toshiyan/Work/Lib/64/Healpix/Healpix_3.20
-F90_BINDIR	= /global/homes/t/toshiyan/Work/Lib/mylib/pub/Healpix/Healpix_3.20/bin
-F90_INCDIR	= /global/homes/t/toshiyan/Work/Lib/mylib/pub/Healpix/Healpix_3.20/include
-F90_LIBDIR	= /global/homes/t/toshiyan/Work/Lib/mylib/pub/Healpix/Healpix_3.20/lib
-FITSDIR	= /global/homes/t/toshiyan/Work/Lib/mylib/pub/cfitsio
+F90_BINDIR	= /mnt/hgfs/Work/Lib/mylib/pub/Healpix/Healpix_3.20/bin
+F90_INCDIR	= /mnt/hgfs/Work/Lib/mylib/pub/Healpix/Healpix_3.20/include
+F90_LIBDIR	= /mnt/hgfs/Work/Lib/mylib/pub/Healpix/Healpix_3.20/lib
+FITSDIR	= /mnt/hgfs/Work/Lib/mylib/pub/cfitsio
 LIBFITS	= cfitsio
-F90_BUILDDIR	= /global/homes/t/toshiyan/Work/Lib/mylib/pub/Healpix/Healpix_3.20/build
+F90_BUILDDIR	= /mnt/hgfs/Work/Lib/mylib/pub/Healpix/Healpix_3.20/build
 
 F90_FFTSRC	= healpix_fft
 F90_ADDUS	=  
@@ -27,9 +27,9 @@ F90_ADDUS	=
 F90_PARALL  =
 
 F90_FC	= ifort
-F90_FFLAGS	= -openmp -I$(F90_INCDIR) -cm -w -vec_report0 -sox -openmp -openmp_report0 -fPIC
+F90_FFLAGS	= -openmp -I$(F90_INCDIR) -cm -w -vec_report0 -sox -fPIC
 F90_CC	= cc
-F90_CFLAGS	= -O3 -std=c99 -DINTEL_COMPILER -openmp -fPIC
+F90_CFLAGS	= -O3 -std=c99 -DINTEL_COMPILER -O -fPIC
 F90_LDFLAGS	= -L$(F90_LIBDIR) -L$(FITSDIR) -lhealpix -lhpxgif -l$(LIBFITS) -Wl,-R$(FITSDIR)
 F90_AR        = ar -rsv
 F90_PPFLAGS	= 

@@ -7,18 +7,18 @@ target=libanafull.a
 
 ## Complier and options ##
 FC = ifort
-FLAG = -O3 -fpp
+FLAG = -openmp -fpp
 #DBAG = -check all -std -gen_interfaces -fpe0 -ftrapuv -traceback
 FLAGS = $(FLAG) $(DBAG)
 
 ## Directories ##
 libroot = ../../
-MyLib   = ${libroot}/
+MyLib   = ${libroot}
 healpix = ${libroot}/pub/Healpix
 cfitsio = ${libroot}/pub/cfitsio
 
 MODD = -I$(healpix)/include -I$(MyLib)/mod
-LIBD = -L$(cfitsio) -L$(healpix)/lib -L$(MyLib)/lib
+LIBD = -L$(healpix)/lib -L$(MyLib)/lib -L$(cfitsio) 
 LINK = -lutils -lhealpix -lcfitsio
 
 OPTION = $(MODD) $(LIBD) $(LINK)

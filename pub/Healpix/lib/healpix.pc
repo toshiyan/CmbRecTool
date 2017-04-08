@@ -1,7 +1,7 @@
 # HEALPix/F90 pkg-config file
 # compiled with ifort
 
-prefix=/global/homes/t/toshiyan/Work/Lib/mylib/pub/Healpix/Healpix_3.20
+prefix=/mnt/hgfs/Work/Lib/mylib/pub/Healpix/Healpix_3.20
 suffix=
 exec_prefix=${prefix}/bin${suffix}
 libdir=${prefix}/lib${suffix}
