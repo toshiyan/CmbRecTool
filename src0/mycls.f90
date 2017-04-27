@@ -177,14 +177,22 @@ subroutine cb2cl(bc,Cb,Cl,f,bp,method)
       end do
     end do
   case ('linear')
-    Cl(1:int(bc(1))) = Cb(1)
+    !edge 1
+    !Cl(1:int(bc(1))) = Cb(1)
+    do j = 1, int(bc(1))
+      Cl(j) = max(0d0,interp_lin(dble(j),bc(1),bc(2),Cb(1),Cb(2)))
+    end do
     do i = 1, bn-1
       if (ln<int(bc(i))) goto 1
       do j = int(bc(i)), min(ln,int(bc(i+1)))
         Cl(j) = interp_lin(dble(j),bc(i),bc(i+1),Cb(i),Cb(i+1))
       end do
     end do
-    Cl(int(bc(bn))+1:) = Cb(bn)
+    !edge 2
+    !Cl(int(bc(bn))+1:) = Cb(bn)
+    do j = int(bc(bn))+1, ln
+      Cl(j) = max(0d0,interp_lin(dble(j),bc(bn-1),bc(bn),Cb(bn-1),Cb(bn)))
+    end do
   case default
     call spline(bc,Cb,bn,0d0,0d0,y2)
     if (ln<int(bc(1))) goto 1
