@@ -135,6 +135,7 @@ subroutine ZETA_L(m1,m2,rL,A,mu,Z)
 end subroutine ZETA_L
 
 
+#ifdef all
 subroutine Kernels(rL,eL,WA,WB,X,kernel)
 !Kernels of lensing reconstruction noise
   implicit none
@@ -260,6 +261,7 @@ subroutine Kernels(rL,eL,WA,WB,X,kernel)
 
 end subroutine Kernels
 
+#endif all
 
 !/////////////////////////////////////////////////////////////////////////////!
 ! Delensing

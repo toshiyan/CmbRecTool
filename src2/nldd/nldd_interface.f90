@@ -6,7 +6,8 @@ module nldd_interface
   use myconst, only: pi, TT, TE, EE, BB, dd
   use mylensrec, only: QTT, QTE, QTB, QEE, QEB, QBB, QMV, QTTTE, QTTEE, QTEEE, QTBEB
   use mylapack95, only: inv_lapack
-  use nldd_lens, only: AlTT, AlTE, AlTB, AlEE, AlEB, AlBB, CLBB_EST, ILTTTE, ILTTEE, ILTEEE, ILTBEB
+  use nldd_lens, only: AlTT, AlTE, AlTB, AlEE, AlEB, AlBB, ILTTTE, ILTTEE, ILTEEE, ILTBEB
+  use nldd_delens, only: CLBB_EST
   implicit none
 
   private pi, TT, TE, EE, BB, dd

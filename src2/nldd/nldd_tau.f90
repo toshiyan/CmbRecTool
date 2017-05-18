@@ -147,7 +147,7 @@ subroutine Kernels(rL,eL,WA,WB,X,kernel)
 end subroutine Kernels
 
 
-subroutine AlTT(rL,eL,Agg,Acc,fC,OCTT)
+subroutine AlTT_tau(rL,eL,Agg,Acc,fC,OCTT)
   implicit none
   !I/O
   integer, intent(in) :: rL(2), eL(2)
@@ -171,10 +171,10 @@ subroutine AlTT(rL,eL,Agg,Acc,fC,OCTT)
   Agg(eL(1):eL(2)) = 1d0/(S0(1,eL(1):eL(2))+G0(1,eL(1):eL(2)))
   Acc(eL(1):eL(2)) = 1d0/(S0(2,eL(1):eL(2))+G0(2,eL(1):eL(2)))
 
-end subroutine AlTT
+end subroutine AlTT_tau
 
 
-subroutine AlTE(rL,eL,Agg,Acc,fC,OCTT,OCEE)
+subroutine AlTE_tau(rL,eL,Agg,Acc,fC,OCTT,OCEE)
   implicit none
   !I/O
   integer, intent(in) :: rL(2), eL(2)
@@ -204,10 +204,10 @@ subroutine AlTE(rL,eL,Agg,Acc,fC,OCTT,OCEE)
   Agg(eL(1):eL(2)) = 1d0/(S0(1,eL(1):eL(2))+Sp(1,eL(1):eL(2))+2d0*Gc(1,eL(1):eL(2)))
   Acc(eL(1):eL(2)) = 1d0/(S0(2,eL(1):eL(2))+Sp(2,eL(1):eL(2))+2d0*Gc(2,eL(1):eL(2)))
 
-end subroutine AlTE
+end subroutine AlTE_tau
 
 
-subroutine AlTB(rL,eL,Agg,Acc,fC,OCTT,OCBB)
+subroutine AlTB_tau(rL,eL,Agg,Acc,fC,OCTT,OCBB)
   implicit none
   !I/O
   integer, intent(in) :: rL(2), eL(2)
@@ -227,10 +227,10 @@ subroutine AlTB(rL,eL,Agg,Acc,fC,OCTT,OCBB)
   Agg(eL(1):eL(2)) = 1d0/Sm(1,eL(1):eL(2))
   Acc(eL(1):eL(2)) = 1d0/Sm(2,eL(1):eL(2))
 
-end subroutine AlTB
+end subroutine AlTB_tau
 
 
-subroutine AlEE(rL,eL,Agg,Acc,fC,OCEE)
+subroutine AlEE_tau(rL,eL,Agg,Acc,fC,OCEE)
 ! Al: 1 -> number of estimator power
 !   : 2 -> number of multipoles
   implicit none
@@ -256,10 +256,10 @@ subroutine AlEE(rL,eL,Agg,Acc,fC,OCEE)
   Agg(eL(1):eL(2)) = 1d0/(Sp(1,eL(1):eL(2))+Gp(1,eL(1):eL(2)))
   Acc(eL(1):eL(2)) = 1d0/(Sp(2,eL(1):eL(2))+Gp(2,eL(1):eL(2)))
 
-end subroutine AlEE
+end subroutine AlEE_tau
 
 
-subroutine AlEB(rL,eL,Agg,Acc,fCEE,OCEE,OCBB)
+subroutine AlEB_tau(rL,eL,Agg,Acc,fCEE,OCEE,OCBB)
   implicit none
   !I/O
   integer, intent(in) :: rL(2), eL(2)
@@ -279,33 +279,7 @@ subroutine AlEB(rL,eL,Agg,Acc,fCEE,OCEE,OCBB)
   Agg(eL(1):eL(2)) = 1d0/Sm(1,eL(1):eL(2))
   Acc(eL(1):eL(2)) = 1d0/Sm(2,eL(1):eL(2))
 
-end subroutine AlEB
-
-
-subroutine AlBB(rL,eL,Agg,Acc,fC,OCBB)
-  implicit none
-  !I/O
-  integer, intent(in) :: rL(2), eL(2)
-  double precision, intent(in), dimension(:) :: fC, OCBB
-  double precision, intent(out) :: Agg(:), ACc(:)
-  !internal
-  double precision, dimension(rL(1):rL(2)) :: W1, W2
-  double precision, dimension(2,eL(2)) :: Sp, Gp
-
-  write(*,*) 'BB'
-
-  W1 = 1d0/OCBB(rL(1):rL(2))
-  W2 = W1 * fC(rL(1):rL(2))**2
-  call kernels(rL,eL,W1,W2,Sp,'Sp')
-
-  W2 = W1 * fC(rL(1):rL(2))
-  call kernels(rL,eL,W2,W2,Gp,'Gp')
-
-  Agg(eL(1):eL(2)) = 1d0/(Sp(1,eL(1):eL(2))+Gp(1,eL(1):eL(2)))
-  Acc(eL(1):eL(2)) = 1d0/(Sp(2,eL(1):eL(2))+Gp(2,eL(1):eL(2)))
-
-
-end subroutine AlBB
+end subroutine AlEB_tau
 
 
 subroutine IlTTTE(rL,eL,Ig,Ic,fCTT,fCTE,OCTT,OCEE,OCTE)
