@@ -119,7 +119,7 @@ subroutine quadtb_pr(nn,D,T,B,TE,rL,mlm)
 end subroutine quadtb_pr
 
 
-subroutine quadeb_pr(nn,D,E,B,EE,BB,rL,tlm,eL)
+subroutine quadeb_pr(nn,D,E,B,EE,rL,tlm)
 !
   implicit none
 ! [inputs]
@@ -127,18 +127,16 @@ subroutine quadeb_pr(nn,D,E,B,EE,BB,rL,tlm,eL)
 !   rL(1:2) --- multipole range of reconstruction
 !   D(1:2)  --- map size (radian)
 !   EE(:)   --- E-mode Cl in 2D grids
-!   BB(:)   --- B-mode Cl in 2D grids
 !   E(:)    --- filtered E-modes
 !   B(:)    --- filtered B-modes
+!   eL(1:2) --- multipole range of output
   integer, intent(in) :: nn(1:2), rL(1:2)
-  double precision, intent(in) :: EE(:), BB(:), D(1:2)
+  double precision, intent(in) :: EE(:), D(1:2)
   complex(dlc), intent(in) :: E(:), B(:)
 !
-! (optional)
-!   eL(1:2) --- multipole range of output
+! [output]
 !   tlm(:)  --- tau mode
-  integer, intent(in), optional :: eL(1:2)
-  complex(dlc), intent(out), optional :: tlm(:)
+  complex(dlc), intent(out) :: tlm(:)
 !
 ! [internal]
   integer :: i, n, npix
@@ -168,10 +166,7 @@ subroutine quadeb_pr(nn,D,E,B,EE,BB,rL,tlm,eL)
   call dft(alm,nn,D,1)
 
   !* estimator 
-  do n = 1, npix
-    if(present(eL).and.els(n)<eL(1).or.els(n)>eL(2)) alm(n) = 0d0
-    if(present(tlm)) tlm(n) = alm(n)/iu
-  end do
+  tlm = alm/iu
 
   deallocate(alm)
 
