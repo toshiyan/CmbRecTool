@@ -51,6 +51,11 @@ module myutils
 
 contains
 
+
+!//////////////////////////////////////////////////////////////////////////////!
+! File status/read/write
+!//////////////////////////////////////////////////////////////////////////////!
+
 function file_exist(fname) result(f)
   implicit none
   character(*), intent(in) :: fname
@@ -424,6 +429,7 @@ subroutine savetxt_assign_d(d,dat,n)
 
 end subroutine savetxt_assign_d
 
+
 subroutine savetxt_assign_c(d,dat,n)
 !* subroutine for savetxt_1d_c
   implicit none
@@ -775,7 +781,9 @@ subroutine savearray_2d_cmplx(f,arr)
 end subroutine savearray_2d_cmplx
 
 
-!//// interface linspace ////!
+!//////////////////////////////////////////////////////////////////////////////!
+! interface linspace 
+!//////////////////////////////////////////////////////////////////////////////!
 
 function linspace_dble(ini,fin,n)  result(f)
 !* output ini, ini*d, ini*2*d, ..., fin
@@ -842,57 +850,9 @@ function linspace_int_div(div,n)  result(f)
 end function linspace_int_div
 
 
-!//// functions/subroutines ////!
-
-function param_id(str,LAB)
-  implicit none
-  character(*), intent(in) :: str, LAB(:)
-  integer :: param_id
-  integer :: p
-
-  do p = 1, size(LAB)
-    if(trim(LAB(p))==str) param_id = p
-  end do
-
-end function param_id
-
-
-function str_n(n)  result(f)
-  implicit none
-  integer, intent(in) :: n
-  character(1+int(log10(dble(n+0.9)))) :: f
-  character(LEN=128) :: a
-
-  write(a,*) n
-  f = adjustl(a)
-
-end function str_n
-
-
-function str_fix(n,l)  result(f)
-  implicit none 
-  integer, intent(in) :: n, l
-  character(l) :: f
-
-  write(f,'(i'//str(l)//'.'//str(l)//')') n
-
-end function str_fix
-
-
-function str4(n)
-  implicit none 
-  integer, intent(in) :: n
-  character(LEN=4) :: str4, a
-
-  if(n<10) a='000'
-  if(n>=10.and.n<100) a='00'
-  if(n>=100) a='0'
-  str4 = trim(a)//str(n)
-
-end function str4
-
-
-!//// interpolation ////!
+!//////////////////////////////////////////////////////////////////////////////!
+! interpolation 
+!//////////////////////////////////////////////////////////////////////////////!
 
 function interp_lin_narr(x,x0,x1,y0,y1)  result(f)
   implicit none
@@ -1023,7 +983,9 @@ function interp_sp(x,x0,x1,y0,y1,sp0,sp1)  result(f)
 end function interp_sp
 
 
-!//// MC simulation ////!
+!//////////////////////////////////////////////////////////////////////////////!
+! MC simulation 
+!//////////////////////////////////////////////////////////////////////////////!
 
 subroutine meanvar(Cl,mCl,vCl,f) 
 !Compute mean and variance of 1D array
@@ -1083,7 +1045,9 @@ subroutine meanvar_save(f,b,C)
 end subroutine meanvar_save
 
 
-!//// histogram ////!
+!//////////////////////////////////////////////////////////////////////////////!
+! histogram 
+!//////////////////////////////////////////////////////////////////////////////!
 
 subroutine get_histogram_bin(a1,a2,bn,bp)
   implicit none
@@ -1144,8 +1108,9 @@ subroutine get_histogram(hist,a1,a2,f,x)
 
 end subroutine get_histogram
 
-
-!//// Quadratures ////!
+!//////////////////////////////////////////////////////////////////////////////!
+! Quadratures 
+!//////////////////////////////////////////////////////////////////////////////!
 
 subroutine get_zeropoint(GLn,GLw,GLz,GLeps)
 ! Zero points of Gauss-Legendre !
@@ -1353,6 +1318,73 @@ subroutine multigrid_index(mmx,mpix,s,label)
   end do
 
 end subroutine multigrid_index
+
+
+!//////////////////////////////////////////////////////////////////////////////!
+! other utils
+!//////////////////////////////////////////////////////////////////////////////!
+
+subroutine check_positive(dat,p)
+! check whether dat is all positive
+  implicit none
+  double precision, intent(in) :: dat(:)
+  logical, intent(out) :: p
+  integer :: i
+
+  p = .true.
+  do i = 1, size(dat)
+    if (dat(i)<0d0) p = .false.
+  end do
+
+end subroutine check_positive
+
+
+function param_id(str,LAB)
+  implicit none
+  character(*), intent(in) :: str, LAB(:)
+  integer :: param_id
+  integer :: p
+
+  do p = 1, size(LAB)
+    if(trim(LAB(p))==str) param_id = p
+  end do
+
+end function param_id
+
+
+function str_n(n)  result(f)
+  implicit none
+  integer, intent(in) :: n
+  character(1+int(log10(dble(n+0.9)))) :: f
+  character(LEN=128) :: a
+
+  write(a,*) n
+  f = adjustl(a)
+
+end function str_n
+
+
+function str_fix(n,l)  result(f)
+  implicit none 
+  integer, intent(in) :: n, l
+  character(l) :: f
+
+  write(f,'(i'//str(l)//'.'//str(l)//')') n
+
+end function str_fix
+
+
+function str4(n)
+  implicit none 
+  integer, intent(in) :: n
+  character(LEN=4) :: str4, a
+
+  if(n<10) a='000'
+  if(n>=10.and.n<100) a='00'
+  if(n>=100) a='0'
+  str4 = trim(a)//str(n)
+
+end function str4
 
 
 end module myutils

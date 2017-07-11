@@ -4,7 +4,7 @@
 
 module mycls
   use myconst, only: dlc, pi, TT, TE, EE, BB, dd, Td, Ed, oo
-  use myutils, only: splint, spline, FileColumns, FileLines, savetxt, linspace, interp_lin
+  use myutils, only: splint, spline, FileColumns, FileLines, savetxt, linspace, interp_lin, check_positive
   implicit none
 
   interface calccl_flat
@@ -12,10 +12,14 @@ module mycls
   end interface calccl_flat
 
   private dlc, pi, TT, TE, EE, BB, dd, Td, Ed, oo
-  private splint, spline, FileColumns, FileLines, savetxt, linspace, interp_lin
+  private splint, spline, FileColumns, FileLines, savetxt, linspace, interp_lin, check_positive
 
 contains
 
+
+!//////////////////////////////////////////////////////////////////////////////!
+! Binned cls
+!//////////////////////////////////////////////////////////////////////////////!
 
 subroutine binned_ells(eL,bp,bc,spc)
 ! * return binned multipole edges and centers
@@ -112,36 +116,26 @@ subroutine cl2cb(bc,Cl,Cb,f)
 end subroutine cl2cb
 
 
-function cl2cbf(bc,Cl) result(Cb)
-! * compute a simple binned Cl from non-binned Cl
+function cl2cbf(bc,cl) result(cb)
+! function of "cl2cb"
   implicit none
   !I/O
-  double precision, intent(in) :: Cl(:), bc(:)
-  double precision :: Cb(size(bc))
+  double precision, intent(in) :: cl(:), bc(:)
+  double precision :: cb(size(bc))
   !internal
   integer :: i
 
-  Cb = 0d0
+  cb = 0d0
   do i = 1, size(bc)
-    Cb(i) = Cl(int(bc(i)))
+    cb(i) = cl(int(bc(i)))
   end do
 
 end function cl2cbf
 
 
-subroutine check_positive(dat,p)
-  implicit none
-  double precision, intent(in) :: dat(:)
-  logical, intent(out) :: p
-  integer :: i
-
-  p = .true.
-  do i = 1, size(dat)
-    if (dat(i)<0d0) p = .false.
-  end do
-
-end subroutine check_positive
-
+!//////////////////////////////////////////////////////////////////////////////!
+! interpretation of binned cls to unbinned cls
+!//////////////////////////////////////////////////////////////////////////////!
 
 subroutine cb2cl(bc,Cb,Cl,f,bp,method)
 ! interpolate non-binned Cl from binned Cl
@@ -215,67 +209,6 @@ subroutine cb2cl(bc,Cb,Cl,f,bp,method)
 end subroutine cb2cl
 
 
-subroutine cb2c2d(bc,els,eL,Cb,C2d,f,method0,method1,bp)
-! Interpolate binned Cl to 2D Cl
-  implicit none
-  !I/O
-  integer, intent(in) :: eL(2)
-  double precision, intent(in) :: bc(:), els(:), Cb(:)
-  double precision, intent(out) :: C2d(:)
-  character(*), intent(in), optional :: f, method0, method1
-  double precision, intent(in), optional :: bp(:)
-  !internal
-  character(8) :: m(2)
-  double precision, allocatable :: Cl(:), bp0(:)
-
-  allocate(Cl(eL(2)),bp0(size(bc)+1)); Cl=0d0; bp0=0d0
-
-  m = ['','']
-  if(present(bp))      bp0  = bp
-  if(present(method0)) m(1) = method0 
-
-  !interpolate Cb -> Cl
-  call cb2cl(bc,Cb,Cl,bp=bp0,method=m(1))
-
-  !* output
-  if(present(f)) call savetxt(f,linspace(1,eL(2)),Cl,ow=.true.)
-
-  !interpolate Cl -> C2d
-  call cl2c2d(els,Cl,eL,c2d)
-
-  deallocate(Cl)
-
-end subroutine cb2c2d
-
-
-subroutine cl2c2d(els,Cl,eL,c2d)
-!* Transform Cl to Cl2D with linear interpolation
-  implicit none
-  !I/O
-  integer, intent(in) :: eL(:)
-  double precision, intent(in) :: els(:), Cl(:)
-  double precision, intent(out) :: c2d(:)
-  !internal
-  logical :: p
-  integer :: n, l0, l1
-
-  !check positivity
-  call check_positive(Cl,p)
-
-  c2d = 0d0
-  do n = 1, size(els)
-    if(eL(1)>els(n).or.els(n)>eL(2)-1) cycle
-    l0 = int(els(n))
-    l1 = l0 + 1
-    c2d(n) = Cl(l0) + (els(n)-l0)*(Cl(l1)-Cl(l0))
-    if (c2d(n)>=0d0.or..not.p) cycle
-    write(*,*) Cl(l0), Cl(l1), l0, els(n)
-    stop 'error (cl2c2d): interpolated Cl is negative'
-  end do
-
-end subroutine cl2c2d
-
-
 subroutine cl_interp_spline(bls,bCl,tL,Cl,islog)
   implicit none
   !I/O
@@ -318,8 +251,73 @@ subroutine cl_interp_spline(bls,bCl,tL,Cl,islog)
 end subroutine cl_interp_spline
 
 
+subroutine cl2c2d(els,Cl,eL,c2d)
+!* Transform Cl to Cl2D with linear interpolation
+  implicit none
+  !I/O
+  integer, intent(in) :: eL(:)
+  double precision, intent(in) :: els(:), Cl(:)
+  double precision, intent(out) :: c2d(:)
+  !internal
+  logical :: p
+  integer :: n, l0, l1
+
+  !check positivity
+  call check_positive(Cl,p)
+
+  c2d = 0d0
+  do n = 1, size(els)
+    if(eL(1)>els(n).or.els(n)>eL(2)-1) cycle
+    l0 = int(els(n))
+    l1 = l0 + 1
+    c2d(n) = Cl(l0) + (els(n)-l0)*(Cl(l1)-Cl(l0))
+    if (c2d(n)>=0d0.or..not.p) cycle
+    write(*,*) Cl(l0), Cl(l1), l0, els(n)
+    stop 'error (cl2c2d): interpolated Cl is negative'
+  end do
+
+end subroutine cl2c2d
+
+
+subroutine cb2c2d(bc,els,eL,Cb,C2d,f,method0,method1,bp)
+! Interpolate binned Cl to 2D Cl
+  implicit none
+  !I/O
+  integer, intent(in) :: eL(2)
+  double precision, intent(in) :: bc(:), els(:), Cb(:)
+  double precision, intent(out) :: C2d(:)
+  character(*), intent(in), optional :: f, method0, method1
+  double precision, intent(in), optional :: bp(:)
+  !internal
+  character(8) :: m(2)
+  double precision, allocatable :: Cl(:), bp0(:)
+
+  allocate(Cl(eL(2)),bp0(size(bc)+1)); Cl=0d0; bp0=0d0
+
+  m = ['','']
+  if(present(bp))      bp0  = bp
+  if(present(method0)) m(1) = method0 
+
+  !interpolate Cb -> Cl
+  call cb2cl(bc,Cb,Cl,bp=bp0,method=m(1))
+
+  !* output
+  if(present(f)) call savetxt(f,linspace(1,eL(2)),Cl,ow=.true.)
+
+  !interpolate Cl -> C2d
+  call cl2c2d(els,Cl,eL,c2d)
+
+  deallocate(Cl)
+
+end subroutine cb2c2d
+
+
+!//////////////////////////////////////////////////////////////////////////////!
+! From alm to angular power spectrum
+!//////////////////////////////////////////////////////////////////////////////!
+
 function alm2cl2d(D,alm1,alm2) result(C)
-!* compute power spectrum in 2D Fourier grids: C_ell
+! alm -> cl2d (flat)
   implicit none
   !I/O
   double precision, intent(in) :: D(1:2)
@@ -337,8 +335,60 @@ function alm2cl2d(D,alm1,alm2) result(C)
 end function alm2cl2d
 
 
+subroutine calccl_flat_alm1d(D,alm1,alm2,Cl,els,f)
+! alm -> cl1d (flat)
+  implicit none
+  !I/O
+  character(*), intent(in), optional :: f
+  double precision, intent(in) :: D(2)
+  double precision, intent(in), optional :: els(:)
+  double precision, intent(out), optional :: Cl(:)
+  complex(dlc), intent(in) :: alm1(:), alm2(:)
+  !internal
+  integer :: i, npix
+  double precision, allocatable :: C(:)
+
+  npix = size(alm1)
+  allocate(C(npix))
+  C = (alm1*conjg(alm2)+alm2*conjg(alm1))*0.5d0/(D(1)*D(2))  ! divided by delta(l=0)
+  if(present(Cl)) Cl = C
+  if(present(f).and.present(els))  call savetxt(f,els,C)
+  deallocate(C)
+
+end subroutine calccl_flat_alm1d
+
+
+subroutine calccl_flat_alm2d(D,alm1,alm2,Cl,els,f)
+! alm -> cl1d (flat)
+  implicit none
+  !I/O
+  character(*), intent(in), optional :: f
+  double precision, intent(in) :: D(2)
+  double precision, intent(in), optional :: els(:)
+  double precision, intent(out), optional :: Cl(:)
+  complex(dlc), intent(in) :: alm1(:,:), alm2(:,:)
+  !internal
+  integer :: i, j, n, npix
+  double precision, allocatable :: C(:)
+
+  npix = size(alm1)
+  allocate(C(npix))
+  n = 1
+  do i = 1, size(alm1,dim=1)
+    do j = 1, size(alm1,dim=2)
+      C(n) = (alm1(i,j)*conjg(alm2(i,j))+alm2(i,j)*conjg(alm1(i,j)))*0.5d0/(D(1)*D(2))  ! divided by delta(l=0)
+      n = n + 1
+    end do
+  end do
+  if(present(Cl)) Cl = C
+  if(present(f).and.present(els))  call savetxt(f,els,C)
+  deallocate(C)
+
+end subroutine calccl_flat_alm2d
+
+
 subroutine alm2bcl_flat(bmax,oL,els,D,alm1,alm2,Cb,Vb,norm,f,spc)
-!* computing binned cl from alm(s). 
+! alm -> binned cl1d (flat)
   implicit none
   integer, intent(in) :: bmax, oL(1:2)
   double precision, intent(in) :: D(1:2), els(:)
@@ -383,7 +433,7 @@ end subroutine alm2bcl_flat
 
 
 subroutine calcbcl_flat(bmax,oL,els,Cl,Cb,Vb,tCl,tVl,f,spc)
-! * calculate binned cls 
+! cl2d -> binned cl1d
 ! - [Note]
 ! - If input alm is zero at oL(1)<=l<=oL(2), the power should be smaller than expectation.
   implicit none
@@ -583,77 +633,27 @@ subroutine cl_elcut(nn,D,Cl)
 end subroutine cl_elcut
 
 
-subroutine calccl(alm1,alm2,el,Cl,f)
+subroutine calccl(alm1,alm2,eL,Cl,f,norm)
   implicit none
   !I/O
   character(*), intent(in), optional :: f
-  integer, intent(in) :: el(2)
+  integer, intent(in) :: eL(2)
+  double precision, intent(in), optional :: norm
   double precision, intent(out), optional :: Cl(:)
-  complex(dlc), intent(in), dimension(0:el(2),0:el(2)) :: alm1, alm2
+  complex(dlc), intent(in), dimension(0:eL(2),0:eL(2)) :: alm1, alm2
   !intenral
   integer :: l
-  double precision :: tCl(el(2))
+  double precision :: tCl(eL(2))
 
   tCl = 0d0
-  do l = el(1), el(2)
+  do l = eL(1), eL(2)
     tCl(l) = ( real(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
   end do
-  if(present(f))  call savetxt(f,linspace(1,el(2)),tCl)
-  if(present(Cl)) Cl=tCl
+  if (present(norm))  tcl = tcl*norm
+  if (present(f))     call savetxt(f,linspace(1,eL(2)),tCl)
+  if (present(Cl))    Cl = tCl
 
 end subroutine calccl
-
-
-subroutine calccl_flat_alm1d(D,alm1,alm2,Cl,els,f)
-  !compute power spectrum from Fourier grids: C_ell
-  implicit none
-  !I/O
-  character(*), intent(in), optional :: f
-  double precision, intent(in) :: D(2)
-  double precision, intent(in), optional :: els(:)
-  double precision, intent(out), optional :: Cl(:)
-  complex(dlc), intent(in) :: alm1(:), alm2(:)
-  !internal
-  integer :: i, npix
-  double precision, allocatable :: C(:)
-
-  npix = size(alm1)
-  allocate(C(npix))
-  C = (alm1*conjg(alm2)+alm2*conjg(alm1))*0.5d0/(D(1)*D(2))  ! divided by delta(l=0)
-  if(present(Cl)) Cl = C
-  if(present(f).and.present(els))  call savetxt(f,els,C)
-  deallocate(C)
-
-end subroutine calccl_flat_alm1d
-
-
-subroutine calccl_flat_alm2d(D,alm1,alm2,Cl,els,f)
-  !compute power spectrum from Fourier grids: C_ell
-  implicit none
-  !I/O
-  character(*), intent(in), optional :: f
-  double precision, intent(in) :: D(2)
-  double precision, intent(in), optional :: els(:)
-  double precision, intent(out), optional :: Cl(:)
-  complex(dlc), intent(in) :: alm1(:,:), alm2(:,:)
-  !internal
-  integer :: i, j, n, npix
-  double precision, allocatable :: C(:)
-
-  npix = size(alm1)
-  allocate(C(npix))
-  n = 1
-  do i = 1, size(alm1,dim=1)
-    do j = 1, size(alm1,dim=2)
-      C(n) = (alm1(i,j)*conjg(alm2(i,j))+alm2(i,j)*conjg(alm1(i,j)))*0.5d0/(D(1)*D(2))  ! divided by delta(l=0)
-      n = n + 1
-    end do
-  end do
-  if(present(Cl)) Cl = C
-  if(present(f).and.present(els))  call savetxt(f,els,C)
-  deallocate(C)
-
-end subroutine calccl_flat_alm2d
 
 
 subroutine angle_average(nn,alm,Al,nmax,label,el)
