@@ -14,14 +14,14 @@ contains
 
 !* Tlm,Elm,Blm: inverse-variance filtered alms (Cov^-1 (Tlm,Elm,Blm)^t)
 
-subroutine QUADTT(nsidet,Tlm1,Tlm2,glm,clm,fC,el,tl)
+subroutine quadtt(nsidet,Tlm1,Tlm2,fC,eL,rL,glm,clm)
 !* fC = ClTT
   implicit none
   !I/O
-  integer :: el(2), tl(2), nsidet
+  integer :: eL(2), rL(2), nsidet
   real(dl), intent(in) :: fC(:)
-  complex(dlc), intent(in), dimension(0:tl(2),0:tl(2)) :: Tlm1, Tlm2
-  complex(dlc), intent(inout), dimension(0:el(2),0:el(2)) :: glm, clm
+  complex(dlc), intent(in), dimension(0:eL(2),0:eL(2)) :: Tlm1, Tlm2
+  complex(dlc), intent(inout), dimension(0:eL(2),0:eL(2)) :: glm, clm
   !internal
   integer :: l, npixt
   real(dl), allocatable :: at(:), map(:,:)
@@ -31,38 +31,38 @@ subroutine QUADTT(nsidet,Tlm1,Tlm2,glm,clm,fC,el,tl)
   npixt = 12*nsidet**2
 
   !* convolution
-  allocate(alm1(1,0:tL(2),0:tL(2)))
+  allocate(alm1(1,0:rL(2),0:rL(2)))
   alm1 = 0d0
-  do l = tL(1), tL(2)
-    alm1(1,l,:) = Tlm1(l,:)
+  do l = rL(1), rL(2)
+    alm1(1,l,0:l) = Tlm1(l,0:l)
   end do 
   allocate(at(0:npixt-1))
-  call alm2map(nsidet,tL(2),tL(2),alm1,at)
+  call alm2map(nsidet,rL(2),rL(2),alm1,at)
   deallocate(alm1)
 
-  allocate(alm1(2,0:tL(2),0:tL(2)))
+  allocate(alm1(2,0:rL(2),0:rL(2)))
   alm1 = 0d0
-  do l = tL(1), tL(2)
-    alm1(1,l,:) = fC(l)*Tlm1(l,:)*dsqrt(dble((l+1)*l))
+  do l = rL(1), rL(2)
+    alm1(1,l,0:l) = fC(l)*Tlm2(l,0:l)*dsqrt(dble((l+1)*l))
   end do 
   allocate(map(0:npixt-1,2))
-  call alm2map_spin(nsidet,tL(2),tL(2),1,alm1,map)
+  call alm2map_spin(nsidet,rL(2),rL(2),1,alm1,map)
   map(:,1) = at*map(:,1)
   map(:,2) = at*map(:,2)
   deallocate(at,alm1)
 
-  allocate(blm(2,0:el(2),0:el(2)))
-  call map2alm_spin(nsidet,tL(2),tL(2),1,map,blm)
+  allocate(blm(2,0:eL(2),0:eL(2)))
+  call map2alm_spin(nsidet,eL(2),eL(2),1,map,blm)
   deallocate(map)
 
   !* compute glm and clm
-  write(*,*) 'compute estimator'
-  do l = el(1), el(2)
-    glm(l,:) = dsqrt(dble(l*(l+1)))*blm(1,l,:)
-    clm(l,:) = dsqrt(dble(l*(l+1)))*blm(2,l,:)
+  write(*,*) 'compute estimator'; glm = 0d0; clm=0d0
+  do l = 0, eL(2)
+    glm(l,0:l) = dsqrt(dble(l*(l+1)))*blm(1,l,0:l)
+    clm(l,0:l) = dsqrt(dble(l*(l+1)))*blm(2,l,0:l)
   end do
 
-end subroutine QUADTT
+end subroutine quadtt
 
 
 subroutine QUADTE(nsidet,Tlm,Elm,glm,clm,fC,eL,tL)
