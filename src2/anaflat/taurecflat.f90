@@ -152,8 +152,8 @@ subroutine quadeb_pr(nn,D,E,B,EE,rL,tlm)
   !* filtering
   do n = 1, npix
     if(rL(1)>els(n).or.els(n)>rL(2)) cycle
-    wB(n) = B(n)*conjg(ei2p(n))
     wE(n) = EE(n)*E(n)*ei2p(n)
+    wB(n) = B(n)*conjg(ei2p(n))
   end do
   deallocate(ei2p)
 
@@ -161,16 +161,69 @@ subroutine quadeb_pr(nn,D,E,B,EE,rL,tlm)
   call dft(wB,nn,D,-1)
   call dft(wE,nn,D,-1)
   allocate(alm(npix))
-  alm = dble(wB*wE)
+  alm = aimag(wB*wE)
   deallocate(wB,wE)
   call dft(alm,nn,D,1)
 
   !* estimator 
-  tlm = alm/iu
-
+  tlm = alm
   deallocate(alm)
 
 end subroutine quadeb_pr
+
+
+subroutine alflat_eb_pr(nn,D,fE,fB,CE,rL,eL,Alg)
+  implicit none
+  !I/O
+  integer, intent(in) :: nn(1:2), el(1:2), rL(1:2)
+  double precision, intent(in) :: CE(:), fE(:), fB(:), D(1:2)
+  double precision, intent(out), optional :: Alg(:)
+! [internal]
+  integer :: n, npix
+  double precision :: ll(2,nn(1)*nn(2)), els(nn(1)*nn(2)), iAlg, iAlc
+  complex(dlc) :: vec(1:2)
+  complex(dlc), allocatable :: Al(:,:), A1(:,:), A2(:,:), ei2p(:)
+
+  write(*,*) 'EB flat pr'
+
+  npix = nn(1)*nn(2)
+  allocate(A1(3,npix),A2(3,npix),ei2p(npix));  A1=0d0;  A2=0d0
+  call elarrays(nn,D,elx=ll(1,:),ely=ll(2,:),els=els,ei2p=ei2p)
+
+  if (size(CE)/=npix)  stop 'error (alflat_eb_pr): CE is strange.'
+
+  !* filtering
+  do n = 1, npix
+    if(rL(1)>els(n).or.els(n)>rL(2)) cycle
+    A1(1,n)  = CE(n)**2*fE(n)*ei2p(n)**2
+    A1(2,n)  = CE(n)**2*fE(n)
+    A2(1,n)  = - fB(n)*conjg(ei2p(n)**2)
+    A2(2,n)  = fB(n)
+  end do
+  deallocate(ei2p)
+
+  !* convolution
+  allocate(Al(2,npix))
+  do n = 1, 2
+    call dft(A1(n,:),nn,D,-1)
+    call dft(A2(n,:),nn,D,-1)
+    Al(n,:) = A1(n,:)*A2(n,:)
+    if (n==1)  Al(n,:) = dble(Al(n,:))
+    call dft(Al(n,:),nn,D,1)
+  end do
+  deallocate(A1,A2)
+
+  !* normalization
+  do n = 1, npix
+    if(els(n)<eL(1).or.els(n)>eL(2))  cycle
+    iAlg = sum(Al(1:2,n))*0.5d0
+    if(iAlg<=0d0) cycle
+    if (present(Alg))  Alg(n) = 1d0 / iAlg
+  end do
+
+  deallocate(Al)
+
+end subroutine alflat_eb_pr
 
 
 !/////////////////////////////////////////////////////////////////////////////////////!
