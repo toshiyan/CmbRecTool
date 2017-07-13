@@ -11,6 +11,11 @@ module mycls
     module procedure calccl_flat_alm1d, calccl_flat_alm2d
   end interface calccl_flat
 
+  interface calccl
+    module procedure calccl_spc, calccl_dpc
+  end interface calccl
+
+
   private dlc, pi, TT, TE, EE, BB, dd, Td, Ed, oo
   private splint, spline, FileColumns, FileLines, savetxt, linspace, interp_lin, check_positive
 
@@ -633,7 +638,30 @@ subroutine cl_elcut(nn,D,Cl)
 end subroutine cl_elcut
 
 
-subroutine calccl(alm1,alm2,eL,Cl,f,norm)
+subroutine calccl_spc(alm1,alm2,eL,Cl,f,norm)
+  implicit none
+  !I/O
+  character(*), intent(in), optional :: f
+  integer, intent(in) :: eL(2)
+  double precision, intent(in), optional :: norm
+  double precision, intent(out), optional :: Cl(:)
+  complex, intent(in), dimension(0:eL(2),0:eL(2)) :: alm1, alm2
+  !intenral
+  integer :: l
+  double precision :: tCl(eL(2))
+
+  tCl = 0d0
+  do l = eL(1), eL(2)
+    tCl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
+  end do
+  if (present(norm))  tcl = tcl*norm
+  if (present(f))     call savetxt(f,linspace(1,eL(2)),tCl)
+  if (present(Cl))    Cl = tCl
+
+end subroutine calccl_spc
+
+
+subroutine calccl_dpc(alm1,alm2,eL,Cl,f,norm)
   implicit none
   !I/O
   character(*), intent(in), optional :: f
@@ -647,13 +675,13 @@ subroutine calccl(alm1,alm2,eL,Cl,f,norm)
 
   tCl = 0d0
   do l = eL(1), eL(2)
-    tCl(l) = ( real(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
+    tCl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
   end do
   if (present(norm))  tcl = tcl*norm
   if (present(f))     call savetxt(f,linspace(1,eL(2)),tCl)
   if (present(Cl))    Cl = tCl
 
-end subroutine calccl
+end subroutine calccl_dpc
 
 
 subroutine angle_average(nn,alm,Al,nmax,label,el)
