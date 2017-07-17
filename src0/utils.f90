@@ -833,9 +833,9 @@ function linspace_int_simple(ini,n)  result(f)
   implicit none
   integer, intent(in) :: ini, n
   integer :: i
-  double precision :: f(1:n)
+  double precision :: f(1:n-ini+1)
 
-  f = [ ( (ini+i-1), i=1,n ) ]
+  f = [ ( (ini+i-1), i=1,n-ini+1 ) ]
 
 end function linspace_int_simple
 
