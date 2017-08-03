@@ -23,7 +23,7 @@ LINK = -lutils -lhealpix -lcfitsio
 
 OPTION = $(MODD) $(LIBD) $(LINK)
 
-OBJ = anafull.o recfull.o delensfull.o taufull.o
+OBJ = anafull.o recfull.o delensfull.o taufull.o srcfull.o
 
 $(target): $(OBJ)
 	ar cr $@ $^
