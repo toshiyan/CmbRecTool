@@ -22,7 +22,7 @@ LINK = -llinalg -lutils -llapack95 -llapack -lrefblas
 
 OPTION = $(MODD) $(LIBD) $(LINK)
 
-OBJ = nldd_kernel.o nldd_lens.o nldd_delens.o nldd_rot.o nldd_tau.o nldd_interface.o nldd_flat.o #nldd_extkernel.o #nldd_ylm.o
+OBJ = nldd_kernel.o nldd_lens.o nldd_delens.o nldd_rot.o nldd_tau.o nldd_src.o nldd_interface.o nldd_flat.o #nldd_extkernel.o #nldd_ylm.o
 
 $(target): $(OBJ)
 	ar cr $@ $^
