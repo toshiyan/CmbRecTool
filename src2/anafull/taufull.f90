@@ -46,10 +46,10 @@ subroutine quadtt_tau_sym(nside,Tlm,fC,eL,rL,xlm)
   deallocate(alm)
 
   !* map to alm
-  allocate(alm(1,0:rL(2),0:rL(2)))
-  call map2alm(nside,rL(2),rL(2),map(1,:)*map(2,:),alm)
+  allocate(alm(1,0:eL(2),0:eL(2)))
+  call map2alm(nside,eL(2),eL(2),map(1,:)*map(2,:),alm)
   xlm = 0d0
-  do l = 0, rL(2)
+  do l = 0, eL(2)
     xlm(l,0:l) = alm(1,l,0:l)
   end do
   deallocate(map,alm)
@@ -85,10 +85,10 @@ subroutine quadtt_tau_asym(nside,Tlm1,Tlm2,fC,eL,rL,xlm)
   deallocate(alm)
 
   !* map to alm
-  allocate(alm(1,0:rL(2),0:rL(2)))
-  call map2alm(nside,rL(2),rL(2),map(1,:)*map(2,:),alm)
+  allocate(alm(1,0:eL(2),0:eL(2)))
+  call map2alm(nside,eL(2),eL(2),map(1,:)*map(2,:),alm)
   xlm = 0d0
-  do l = 0, rL(2)
+  do l = 0, eL(2)
     xlm(l,0:l) = alm(1,l,0:l)
   end do
   deallocate(map,alm)
