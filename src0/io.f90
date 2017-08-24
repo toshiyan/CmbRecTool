@@ -9,11 +9,11 @@ module io
   complex(dlc), parameter :: iu = (0d0,1d0)
 
   interface loadfile
-    module procedure loadfile_1d_d, loadfile_1d_c, loadfile_2d_d, loadfile_2d_c
+    module procedure loadfile_1d_d, loadfile_1d_c, loadfile_2d_d, loadfile_2d_c, loadfile_3d_d, loadfile_3d_c
   end interface loadfile
 
   interface savefile
-    module procedure savefile_1d_d, savefile_1d_c, savefile_2d_d, savefile_2d_c
+    module procedure savefile_1d_d, savefile_1d_c, savefile_2d_d, savefile_2d_c, savefile_3d_d, savefile_3d_c
   end interface savefile
 
   private dlc, pi, iu
@@ -181,10 +181,102 @@ subroutine loadfile_2d_c(f,d1,d2,d3,d4,d5,d6,d7,ns,a)
 end subroutine loadfile_2d_c
 
 
-subroutine savefile_1d_d(f,d1,d2,d3,d4,d5,ow,a)
+subroutine loadfile_3d_d(f,d1,d2,d3,d4,d5,d6,d7,ns,a)
   implicit none
   !I/O
-  logical, intent(in), optional :: ow
+  character(*), intent(in) :: f
+  double precision, intent(out) :: d1(:,:,:)
+  double precision, intent(out), dimension(:,:,:), optional :: d2,d3,d4,d5,d6,d7
+  !optional
+  character(*), intent(in), optional :: a
+  logical, intent(in), optional :: ns
+  !internal
+  character(16) :: ac
+  integer :: i, frm(1:3)
+
+  ac = 'stream'
+  if (present(a)) ac=a
+
+  !* read data from file
+  open(unit=20,file=trim(f),status='old',form='unformatted',access=ac)
+
+  if (.not.present(ns).or.ns==.false.) then
+    read(20) frm !size
+    call check_inputdata_size(frm,shape(d1),'loadfile_3d_d')
+  end if
+
+  read(20) d1
+  if (present(d2)) read(20) d2
+  if (present(d3)) read(20) d3
+  if (present(d4)) read(20) d4
+  if (present(d5)) read(20) d5
+  if (present(d6)) read(20) d6
+  if (present(d7)) read(20) d7
+
+  close(20)
+
+end subroutine loadfile_3d_d
+
+
+subroutine loadfile_3d_c(f,d1,d2,d3,d4,d5,d6,d7,ns,a)
+  implicit none
+  !I/O
+  character(*), intent(in) :: f
+  complex(dlc), intent(out) :: d1(:,:,:)
+  complex(dlc), intent(out), dimension(:,:,:), optional :: d2,d3,d4,d5,d6,d7
+  !optional
+  character(*), intent(in), optional :: a
+  logical, intent(in), optional :: ns
+  !internal
+  character(16) :: ac
+  integer :: i, frm(1:3)
+
+  ac = 'stream'
+  if (present(a)) ac=a
+
+  !* read data from file
+  open(unit=20,file=trim(f),status='old',form='unformatted',access=ac)
+
+  if (.not.present(ns).or.ns==.false.) then
+    read(20) frm(1), frm(2), frm(3) !get size
+    call check_inputdata_size(frm,shape(d1),'loadfile_3d_c')
+  end if
+
+  read(20) d1
+  if (present(d2)) read(20) d2
+  if (present(d3)) read(20) d3
+  if (present(d4)) read(20) d4
+  if (present(d5)) read(20) d5
+  if (present(d6)) read(20) d6
+  if (present(d7)) read(20) d7
+
+  close(20)
+
+end subroutine loadfile_3d_c
+
+
+subroutine check_inputdata_size(frm,dsize,text)
+  implicit none
+  character(*), intent(in) :: text
+  integer, intent(in) :: frm(:), dsize(:)
+  integer :: i
+
+  do i = 1, size(frm)
+    if (dsize(i)>frm(i)) then
+      write(*,*) 'error ('//trim(text)//'): size is strange'
+      write(*,*) 'dim:', i
+      write(*,*) 'size you specified:', dsize(i)
+      write(*,*) 'size read from file:', frm(i)
+      stop
+    end if
+  end do
+
+end subroutine check_inputdata_size
+
+subroutine savefile_1d_d(f,d1,d2,d3,d4,d5,ow,ns,a)
+  implicit none
+  !I/O
+  logical, intent(in), optional :: ow, ns
   character(*), intent(in) :: f
   double precision, dimension(:), intent(in) :: d1
   double precision, dimension(:), intent(in), optional :: d2, d3, d4, d5
@@ -202,7 +294,7 @@ subroutine savefile_1d_d(f,d1,d2,d3,d4,d5,ow,a)
 
   ! output
   open(unit=20,file=trim(f),status=st,form='unformatted',access=ac)
-  write(20) size(d1)
+  if (.not.present(ns).or.ns==.false.)  write(20) size(d1)
   write(20) d1
   if (present(d2)) write(20) d2
   if (present(d3)) write(20) d3
@@ -213,10 +305,10 @@ subroutine savefile_1d_d(f,d1,d2,d3,d4,d5,ow,a)
 end subroutine savefile_1d_d
 
 
-subroutine savefile_1d_c(f,d1,d2,d3,d4,d5,ow,a)
+subroutine savefile_1d_c(f,d1,d2,d3,d4,d5,ow,ns,a)
   implicit none
   !I/O
-  logical, intent(in), optional :: ow
+  logical, intent(in), optional :: ow, ns
   character(*), intent(in) :: f
   complex(dlc), dimension(:), intent(in) :: d1
   complex(dlc), dimension(:), intent(in), optional :: d2, d3, d4, d5
@@ -234,7 +326,7 @@ subroutine savefile_1d_c(f,d1,d2,d3,d4,d5,ow,a)
 
   ! output
   open(unit=20,file=trim(f),status=st,form='unformatted',access=ac)
-  write(20) size(d1)
+  if (.not.present(ns).or.ns==.false.)  write(20) size(d1)
   write(20) d1
   if (present(d2)) write(20) d2
   if (present(d3)) write(20) d3
@@ -245,10 +337,10 @@ subroutine savefile_1d_c(f,d1,d2,d3,d4,d5,ow,a)
 end subroutine savefile_1d_c
 
 
-subroutine savefile_2d_d(f,d1,d2,d3,d4,d5,ow,a)
+subroutine savefile_2d_d(f,d1,d2,d3,d4,d5,ow,ns,a)
   implicit none
   !I/O
-  logical, intent(in), optional :: ow
+  logical, intent(in), optional :: ow, ns
   character(*), intent(in) :: f
   double precision, dimension(:,:), intent(in) :: d1
   double precision, dimension(:,:), intent(in), optional :: d2, d3, d4, d5
@@ -266,7 +358,7 @@ subroutine savefile_2d_d(f,d1,d2,d3,d4,d5,ow,a)
 
   ! output
   open(unit=20,file=trim(f),status=st,form='unformatted',access=ac)
-  write(20) size(d1,dim=1), size(d1,dim=2)
+  if (.not.present(ns).or.ns==.false.)  write(20) size(d1,dim=1), size(d1,dim=2)
   write(20) d1
   if (present(d2)) write(20) d2
   if (present(d3)) write(20) d3
@@ -287,7 +379,6 @@ subroutine savefile_2d_c(f,d1,d2,d3,d4,d5,ow,ns,a)
   character(*), intent(in), optional :: a
   !internal
   character(16) :: ac, st
-  integer :: frm(2)
 
   !access
   ac = 'stream'
@@ -298,9 +389,8 @@ subroutine savefile_2d_c(f,d1,d2,d3,d4,d5,ow,ns,a)
   if (present(ow).and.ow==.true.) st = 'replace'
 
   ! output
-  frm = [size(d1,dim=1), size(d1,dim=2)]
   open(unit=20,file=trim(f),status=st,form='unformatted',access=ac)
-  if (.not.present(ns).or.ns==.false.) write(20) frm(1), frm(2)
+  if (.not.present(ns).or.ns==.false.)  write(20) size(d1,dim=1), size(d1,dim=2)
   write(20) d1
   if (present(d2)) write(20) d2
   if (present(d3)) write(20) d3
@@ -309,6 +399,70 @@ subroutine savefile_2d_c(f,d1,d2,d3,d4,d5,ow,ns,a)
   close(20)
 
 end subroutine savefile_2d_c
+
+
+subroutine savefile_3d_d(f,d1,d2,d3,d4,d5,ow,ns,a)
+  implicit none
+  !I/O
+  logical, intent(in), optional :: ow, ns
+  character(*), intent(in) :: f
+  double precision, dimension(:,:,:), intent(in) :: d1
+  double precision, dimension(:,:,:), intent(in), optional :: d2, d3, d4, d5
+  character(*), intent(in), optional :: a
+  !internal
+  character(16) :: ac, st
+
+  !access
+  ac = 'stream'
+  if (present(a)) ac=a
+
+  ! ow
+  st = 'new'
+  if (present(ow).and.ow==.true.) st = 'replace'
+
+  ! output
+  open(unit=20,file=trim(f),status=st,form='unformatted',access=ac)
+  if (.not.present(ns).or.ns==.false.)  write(20) size(d1,dim=1), size(d1,dim=2), size(d1,dim=3)
+  write(20) d1
+  if (present(d2)) write(20) d2
+  if (present(d3)) write(20) d3
+  if (present(d4)) write(20) d4
+  if (present(d5)) write(20) d5
+  close(20)
+
+end subroutine savefile_3d_d
+
+
+subroutine savefile_3d_c(f,d1,d2,d3,d4,d5,ow,ns,a)
+  implicit none
+  !I/O
+  logical, intent(in), optional :: ow, ns
+  character(*), intent(in) :: f
+  complex(dlc), dimension(:,:,:), intent(in) :: d1
+  complex(dlc), dimension(:,:,:), intent(in), optional :: d2, d3, d4, d5
+  character(*), intent(in), optional :: a
+  !internal
+  character(16) :: ac, st
+
+  !access
+  ac = 'stream'
+  if (present(a)) ac=a
+
+  ! ow
+  st = 'new'
+  if (present(ow).and.ow==.true.) st = 'replace'
+
+  ! output
+  open(unit=20,file=trim(f),status=st,form='unformatted',access=ac)
+  if (.not.present(ns).or.ns==.false.)  write(20) size(d1,dim=1), size(d1,dim=2), size(d1,dim=3)
+  write(20) d1
+  if (present(d2)) write(20) d2
+  if (present(d3)) write(20) d3
+  if (present(d4)) write(20) d4
+  if (present(d5)) write(20) d5
+  close(20)
+
+end subroutine savefile_3d_c
 
 
 end module io

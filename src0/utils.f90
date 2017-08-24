@@ -16,7 +16,7 @@ module myutils
   end type gauss_legendre_params
 
   interface str
-    module procedure str_n, str_fix
+    module procedure str_n, str_fix, str_fix_r, str_fix_d
   end interface
 
   interface filecolumns
@@ -34,10 +34,6 @@ module myutils
   interface savetxt
     module procedure savetxt_1d_d, savetxt_1d_c, savetxt_2d_d, savetxt_2d_c
   end interface savetxt
-
-  interface savearray
-    module procedure savearray_2d_dble, savearray_2d_cmplx, savearray_1d_dble, savearray_1d_cmplx
-  end interface
 
   interface linspace
     module procedure linspace_dble, linspace_int, linspace_int_simple, linspace_dble_div, linspace_int_div
@@ -731,56 +727,6 @@ subroutine savetxt_2d_c(f,d1,d2,d3,d4,d5,ac,ow)
 end subroutine savetxt_2d_c
 
 
-subroutine savearray_1d_dble(f,arr,nn)
-  implicit none
-  character(*), intent(in) :: f
-  integer, intent(in) :: nn(1:2)
-  double precision, intent(in) :: arr(:)
-
-  call savearray_2d_dble(f,reshape(arr,nn,order=[2,1]))
-
-end subroutine savearray_1d_dble
-
-
-subroutine savearray_1d_cmplx(f,arr,nn)
-  implicit none
-  character(*), intent(in) :: f
-  integer, intent(in) :: nn(1:2)
-  complex(dlc), intent(in) :: arr(:)
-
-  call savearray_2d_cmplx(f,reshape(arr,nn,order=[2,1]))
-
-end subroutine savearray_1d_cmplx
-
-
-subroutine savearray_2d_dble(f,arr)
-  implicit none
-  character(*), intent(in) :: f
-  double precision, intent(in) :: arr(:,:)
-  integer :: i,j
-
-  call ifexist_chorg(f)
-  open(unit=20,file=trim(f),status='replace') 
-  write(20,'(2(I6,1X),E12.5)') (((i,j,arr(i,j)),j=1,size(arr,dim=2)),i=1,size(arr,dim=1))
-  close(20)
-
-end subroutine savearray_2d_dble
-
-
-subroutine savearray_2d_cmplx(f,arr)
-  implicit none
-  character(*), intent(in) :: f
-  complex(dlc), intent(in) :: arr(:,:)
-  integer :: i,j
-
-  call ifexist_chorg(f)
-  open(unit=20,file=trim(f),status='replace') 
-  write(20,'(2(I6,1X),2(E12.5,1X))') (((i,j,arr(i,j)),j=1,size(arr,dim=2)),i=1,size(arr,dim=1))
-  close(20)
-
-end subroutine savearray_2d_cmplx
-
-
 !//////////////////////////////////////////////////////////////////////////////!
 ! interface linspace 
 !//////////////////////////////////////////////////////////////////////////////!
@@ -1374,17 +1320,78 @@ function str_fix(n,l)  result(f)
 end function str_fix
 
 
-function str4(n)
-  implicit none 
+function str_fix_r(n,l)  result(f)
+  implicit none
+  real, intent(in) :: n
+  integer, intent(in) :: l
+  character(l) :: f
+  integer :: m
+
+  m = floor(log10(n))
+
+  if (l<abs(m)+2) stop 'error in str_fix_r: not enough length specified'
+  if (n<1)  write(f,'(f'//str_n(l)//'.'//str_n(l-2)//')')   n
+  if (n>=1) write(f,'(f'//str_n(l)//'.'//str_n(l-2-m)//')') n
+
+end function str_fix_r
+
+
+function str_fix_d(n,l)  result(f)
+  implicit none
+  double precision, intent(in) :: n
+  integer, intent(in) :: l
+  character(l) :: f
+  integer :: m
+
+  m = floor(log10(n))
+
+  if (l<abs(m)+2) stop 'error in str_fix_d: not enough length specified'
+  if (n<1)  write(f,'(f'//str_n(l)//'.'//str_n(l-2)//')')   n
+  if (n>=1) write(f,'(f'//str_n(l)//'.'//str_n(l-2-m)//')') n
+
+end function str_fix_d
+
+
+function ones_i(n)  result(f)
+  implicit none
   integer, intent(in) :: n
-  character(LEN=4) :: str4, a
+  integer :: i, f(n)
 
-  if(n<10) a='000'
-  if(n>=10.and.n<100) a='00'
-  if(n>=100) a='0'
-  str4 = trim(a)//str(n)
+  f = [ ( (1), i=1,n ) ]
 
-end function str4
+end function ones_i
+
+
+function ones_d(n)  result(f)
+  implicit none
+  integer, intent(in) :: n
+  integer :: i
+  double precision :: f(n)
+
+  f = [ ( (1d0), i=1,n ) ]
+
+end function ones_d
+
+
+function zeros_i(n)  result(f)
+  implicit none
+  integer, intent(in) :: n
+  integer :: i, f(n)
+
+  f = [ ( (0), i=1,n ) ]
+
+end function zeros_i
+
+
+function zeros_d(n)  result(f)
+  implicit none
+  integer, intent(in) :: n
+  integer :: i
+  double precision :: f(n)
+
+  f = [ ( (0d0), i=1,n ) ]
+
+end function zeros_d
 
 
 end module myutils
