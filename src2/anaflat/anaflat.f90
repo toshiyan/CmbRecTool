@@ -5,7 +5,8 @@
 module anaflat
   use myrandom, only: InitRandom, ranmar, Gaussian1
   use myconst,  only: dlc, iu, pi
-  use myutils,  only: filelines, savetxt, loadtxt, savearray
+  use myutils,  only: filelines, savetxt, loadtxt
+  use io,       only: savefile
   use mycls,    only: cl2c2d
   implicit none
 
@@ -27,7 +28,8 @@ module anaflat
 
   private InitRandom, ranmar, gaussian1
   private dlc, iu, pi
-  private filelines, savetxt, loadtxt, savearray
+  private filelines, savetxt, loadtxt
+  private savefile
   private cl2c2d
 
   !local variable
@@ -158,7 +160,7 @@ subroutine map_write(nn,f,map1D,map2D,s)
   deallocate(map)
 
   !* output
-  call savearray(f,smap)
+  call savefile(f,smap)
   deallocate(smap)
 
 end subroutine map_write

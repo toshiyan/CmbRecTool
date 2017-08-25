@@ -4,7 +4,6 @@
 
 module myfftw
   use myconst, only: dlc, iu, pi, twopi
-  use myutils, only: savearray
   use array,   only: mapcut
   use anaflat, only: spin_weight, gaussian_alm
   implicit none
@@ -30,7 +29,6 @@ module myfftw
 
   private FFTW_ESTIMATE
   private dlc, iu, pi, twopi
-  private savearray
   private mapcut
   private spin_weight, gaussian_alm
 

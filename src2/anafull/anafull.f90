@@ -45,31 +45,59 @@ subroutine gaussianalm(alm,Cl,lmax)
 end subroutine gaussianalm
 
 
-subroutine gaussianTEB(alm,Cl,lmax)
+subroutine gaussianTE(alm,TT,EE,TE,lmax)
+  !* include correlation between T and E
+  !* order of input Cl should be TT, EE, TE
+  implicit none
+  !I/O
+  integer, intent(in) :: lmax
+  real(dl), intent(in) :: TT(:), EE(:), TE(:)
+  complex(dlc), intent(out) :: alm(2,0:lmax,0:lmax)
+  !internal
+  integer :: l, m
+  real(dl) :: tamp, corr, xamp
+
+  alm = 0
+  call gaussianalm(alm(1,:,:),TT,lmax)
+
+  call initrandom(-1)
+  do l = 2, lmax
+    tamp = TT(l)
+    if(TT(l)==0d0) tamp=1d0  !prevent divide by zero
+    corr = TE(l)/tamp
+    xamp = sqrt(EE(l) - corr*TE(l))
+    alm(2,l,0) = corr*alm(1,l,0) + Gaussian1()*xamp
+    xamp = xamp/sqrt(2d0)
+    do m =1, l
+      alm(2,l,m) = corr*alm(1,l,m) + cmplx(Gaussian1(),Gaussian1())*xamp
+    end do
+  end do
+
+end subroutine gaussianTE
+
+
+subroutine gaussianTEB(alm,TT,EE,BB,TE,lmax)
   !* include correlation between T and E
   !* order of input Cl should be TT, EE, BB, TE
   implicit none
   !I/O
   integer, intent(in) :: lmax
-  real(dl), intent(in) :: Cl(:,:)
+  real(dl), intent(in) :: TT(:), EE(:), BB(:), TE(:)
   complex(dlc), intent(out) :: alm(3,0:lmax,0:lmax)
   !internal
   integer :: l, m
-  integer, parameter :: TT=1, EE=3, BB=4, TE=2
   real(dl) :: tamp, corr, xamp
 
-  if(size(Cl,dim=1)<4) stop 'error: need more Cls to simulate alm'
-
   alm = 0
-  call gaussianalm(alm(1,:,:),Cl(TT,:),lmax)
-  call gaussianalm(alm(3,:,:),Cl(BB,:),lmax)
+  call gaussianalm(alm(1,:,:),TT,lmax)
+  call gaussianalm(alm(3,:,:),BB,lmax)
 
   call initrandom(-1)
   do l = 2, lmax
-    tamp = Cl(TT,l)
-    if(Cl(TT,l)==0d0) tamp=1d0  !prevent divide by zero
-    corr = Cl(TE,l)/tamp
-    xamp = sqrt(Cl(EE,l) - corr*Cl(TE,l))
+    tamp = TT(l)
+    if(TT(l)==0d0) tamp=1d0  !prevent divide by zero
+    corr = TE(l)/tamp
+    xamp = sqrt(EE(l) - corr*TE(l))
     alm(2,l,0) = corr*alm(1,l,0) + Gaussian1()*xamp
     xamp = xamp/sqrt(2d0)
     do m =1, l
@@ -284,6 +312,7 @@ end subroutine map_output_p
 
 subroutine SIM_QUMAP(Pmap,Cl,lmax,nside)
   implicit none
+  !order of cl shoud be TT, EE, BB, TE
   !I/O
   integer, intent(in) :: lmax,nside
   double precision, intent(in) :: Cl(:,:)
@@ -296,8 +325,8 @@ subroutine SIM_QUMAP(Pmap,Cl,lmax,nside)
   npix = size(Pmap,dim=1)
 
   allocate(alm(3,0:lmax,0:lmax),map(0:npix-1,1:3))
-  call gaussianteb(alm,Cl,lmax)
-  call ALM2MAP(nside,lmax,lmax,alm,map)
+  call gaussianTEB(alm,Cl(1,:),Cl(2,:),Cl(3,:),Cl(4,:),lmax)
+  call alm2map(nside,lmax,lmax,alm,map)
   Pmap(:,1) = map(:,2)
   Pmap(:,2) = map(:,3)
   deallocate(alm,map)
@@ -318,8 +347,8 @@ subroutine SIM_QUMAP_NOISE(Pmap,Nl,lmax,nside)
   npix = size(Pmap,dim=1)
 
   allocate(alm(2,0:lmax,0:lmax))
-  call GaussianAlm(alm(1,:,:),Nl,lmax)
-  call GaussianAlm(alm(2,:,:),Nl,lmax)
+  call gaussianalm(alm(1,:,:),Nl,lmax)
+  call gaussianalm(alm(2,:,:),Nl,lmax)
   call alm2map_spin(nside,lmax,lmax,2,alm,Pmap)
   deallocate(alm)
 
