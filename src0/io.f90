@@ -93,32 +93,39 @@ subroutine loadfile_1d_c(f,d1,d2,d3,d4,d5,d6,d7,a)
 end subroutine loadfile_1d_c
 
 
-subroutine loadfile_2d_d(f,d1,d2,d3,d4,d5,d6,d7,a)
+subroutine loadfile_2d_d(f,d1,d2,d3,d4,d5,d6,d7,ns,a)
   implicit none
   !I/O
   character(*), intent(in) :: f
   double precision, intent(out) :: d1(:,:)
   double precision, intent(out), dimension(:,:), optional :: d2,d3,d4,d5,d6,d7
   character(*), intent(in), optional :: a
+  logical, intent(in), optional :: ns
   !internal
   character(16) :: ac
-  integer :: i, frm(1:2)
+  integer :: i, frm(2)
 
   ac = 'stream'
   if (present(a)) ac=a
 
   !* read data from file
   open(unit=20,file=trim(f),status='old',form='unformatted',access=ac)
-  read(20) frm !get row and column
 
-  do i = 1, 2
-    if (size(d1,dim=i)>frm(i)) then
-      write(*,*) 'error (loadfile_2d_d): size is strange'
-      write(*,*) 'size specified:', size(d1,dim=i)
-      write(*,*) 'size read from file:', frm(i)
-      stop
-    end if
-  end do
+  if (.not.present(ns).or.ns==.false.) then
+
+    read(20) frm !get row and column
+
+    do i = 1, 2
+      if (size(d1,dim=i)>frm(i)) then
+        write(*,*) 'error (loadfile_2d_d): size is strange'
+        write(*,*) 'dim:', i
+        write(*,*) 'size specified:', size(d1,dim=i)
+        write(*,*) 'size read from file:', frm(i)
+        stop
+      end if
+    end do
+
+  end if
 
   read(20) d1
   if (present(d2)) read(20) d2
