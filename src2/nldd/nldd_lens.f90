@@ -158,6 +158,7 @@ subroutine AlTT(rL,eL,Agg,Acc,fC,OCTT)
   double precision, dimension(2,eL(2)) :: S0, G0
 
   write(*,*) 'TT'
+  if (eL(1)<1)  stop 'error (altt): lmin<1'
 
   W1 = 1d0 / OCTT(rL(1):rL(2))
   W2 = W1 * fC(rL(1):rL(2))**2
@@ -185,6 +186,7 @@ subroutine AlTE(rL,eL,Agg,Acc,fC,OCTT,OCEE)
   double precision, dimension(2,eL(2)) :: S0, Sp, Gc
 
   write(*,*) 'TE'
+  if (eL(1)<1)  stop 'error (alte): lmin<1'
 
   W1 = 1d0/OCTT(rL(1):rL(2))
   W2 = fC(rL(1):rL(2))**2/OCEE(rL(1):rL(2))
@@ -218,6 +220,7 @@ subroutine AlTB(rL,eL,Agg,Acc,fC,OCTT,OCBB)
   double precision, dimension(2,eL(2)) :: Sm
 
   write(*,*) 'TB'
+  if (eL(1)<1)  stop 'error (altb): lmin<1'
 
   W1 = 1d0/OCBB(rL(1):rL(2))
   W2 = fC(rL(1):rL(2))**2/OCTT(rL(1):rL(2))
@@ -243,6 +246,7 @@ subroutine AlEE(rL,eL,Agg,Acc,fC,OCEE)
   double precision, dimension(2,eL(2)) :: Sp, Gp
 
   write(*,*) 'EE'
+  if (eL(1)<1)  stop 'error (alee): lmin<1'
 
   W1 = 1d0/OCEE(rL(1):rL(2))
   W2 = W1 * fC(rL(1):rL(2))**2
@@ -270,6 +274,7 @@ subroutine AlEB(rL,eL,Agg,Acc,fCEE,OCEE,OCBB)
   double precision, dimension(2,eL(2)) :: Sm
 
   write(*,*) 'EB'
+  if (eL(1)<1)  stop 'error (aleb): lmin<1'
 
   W1 = 1d0/OCBB(rL(1):rL(2))
   W2 = fCEE(rL(1):rL(2))**2 / OCEE(rL(1):rL(2))
@@ -293,6 +298,7 @@ subroutine AlBB(rL,eL,Agg,Acc,fC,OCBB)
   double precision, dimension(2,eL(2)) :: Sp, Gp
 
   write(*,*) 'BB'
+  if (eL(1)<1)  stop 'error (albb): lmin<1'
 
   W1 = 1d0/OCBB(rL(1):rL(2))
   W2 = W1 * fC(rL(1):rL(2))**2
@@ -320,6 +326,7 @@ subroutine IlTTTE(rL,eL,Ig,Ic,fCTT,fCTE,OCTT,OCEE,OCTE)
   double precision, dimension(2,eL(2)) :: S0, Gc, G0, Sc
 
   write(*,*) 'TTTE'
+  if (eL(1)<1)  stop 'error (ilttte): lmin<1'
   Ig=0d0 ;  Ic=0d0
 
   do l = rL(1), rL(2)
@@ -366,6 +373,7 @@ subroutine IlTTEE(rL,eL,Ig,Ic,fCTT,fCEE,OCTT,OCEE,OCTE)
   double precision, dimension(2,eL(2)) :: Sc, Gc
 
   write(*,*) 'TTEE'
+  if (eL(1)<1)  stop 'error (ilttee): lmin<1'
   Ig=0d0 ;  Ic=0d0 ;  W1=0d0 ;  W2=0d0
 
   do l = rL(1), rL(2)
@@ -398,6 +406,7 @@ subroutine IlTEEE(rL,eL,Ig,Ic,fCEE,fCTE,OCTT,OCEE,OCTE)
   double precision, dimension(2,eL(2)) :: Sc,Gp,Gc,Sp
 
   write(*,*) 'TEEE'
+  if (eL(1)<1)  stop 'error (ilteee): lmin<1'
   Ig=0d0 ;  Ic=0d0
 
   do l = rL(1), rL(2)
@@ -444,6 +453,7 @@ subroutine IlTBEB(rL,eL,Ig,Ic,fCEE,fCBB,fCTE,OCTT,OCEE,OCBB,OCTE)
   double precision, dimension(rL(1):rL(2)) :: W1, W2
 
   write(*,*) 'TBEB'
+  if (eL(1)<1)  stop 'error (iltbeb): lmin<1'
   Ig=0d0 ;  Ic=0d0
 
   do l = rL(1), rL(2)

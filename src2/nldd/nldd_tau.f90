@@ -116,6 +116,8 @@ subroutine AlTT_tau(rL,eL,Att,fC,OCTT,ITT,gln,gle)
 
   write(*,*) 'TT'
 
+  if (eL(1)<1)  stop 'error (altt_tau): lmin<1'
+
   !only compute nonzero values
   oL = [eL(1),min(2*rL(2),eL(2))]
 
