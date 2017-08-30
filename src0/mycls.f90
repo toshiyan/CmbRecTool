@@ -665,31 +665,25 @@ subroutine calccl_dpc(alm1,alm2,iL,Cl,oL,f,norm)
   implicit none
   !I/O
   integer, intent(in) :: iL(2)
+  double precision, intent(out) :: cl(:)
   complex(dlc), intent(in), dimension(0:iL(2),0:iL(2)) :: alm1, alm2
   !optional
   character(*), intent(in), optional :: f
   integer, intent(in), optional :: oL(2)
   double precision, intent(in), optional :: norm
-  double precision, intent(out), optional :: Cl(:)
   !intenral
   integer :: l, eL(2)
-  double precision, allocatable :: tcl(:)
 
-  eL = iL
+  eL = [1,size(cl)]
   if (present(oL))  eL=oL
   if (eL(1)<1)  stop 'error (calccl_dpc): lmin < 1'
 
-  allocate(tcl(eL(2))); tcl=0d0
-
   do l = eL(1), eL(2)
-    tcl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
+    cl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
   end do
 
-  if (present(norm))  tcl = tcl*norm
-  if (present(f))     call savetxt(f,linspace(1,eL(2)),tcl)
-  if (present(Cl))    Cl = tcl
-
-  deallocate(tCl)
+  if (present(norm))  cl = cl*norm
+  if (present(f))     call savetxt(f,linspace(1,eL(2)),cl)
 
 end subroutine calccl_dpc
 
