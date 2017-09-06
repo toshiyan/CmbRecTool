@@ -285,13 +285,13 @@ subroutine QUADEE(nsidet,Elm1,Elm2,glm,clm,fC,eL,tL)
 end subroutine QuadEE
 
 
-subroutine QuadEB(nsidet,Elm,Blm,glm,clm,fC,eL,tL)
+subroutine quadeb(nsidet,Elm,Blm,fC,eL,tL,glm,clm)
 !* fC = ClEE
   implicit none
   !I/O
   integer, intent(in) :: nsidet, eL(2), tL(2)
   real(dl), intent(in) :: fC(:)
-  complex(dlc), intent(in), dimension(0:tL(2),0:tL(2)) :: Elm, Blm
+  complex(dlc), intent(in), dimension(0:eL(2),0:eL(2)) :: Elm, Blm
   complex(dlc), intent(out), dimension(0:eL(2),0:eL(2)) :: glm, clm
   !internal
   integer :: l, npixt
@@ -378,7 +378,7 @@ subroutine QuadEB(nsidet,Elm,Blm,glm,clm,fC,eL,tL)
 !  end do
 !  deallocate(tlm)
 
-end subroutine QuadEB
+end subroutine quadeb
 
 
 subroutine QUADBB(nsidet,Blm1,Blm2,glm,clm,fC,eL,tL)
