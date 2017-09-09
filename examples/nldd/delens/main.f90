@@ -10,7 +10,7 @@ program main
   use mycmbexp,  only: instnl
   use mycls,     only: readcl_camb
   use nldd_interface, only: al_interface
-  use nldd_lens, only: clbb_lin, res_clbb
+  use nldd_delens, only: clbb_lin, res_clbb
   implicit none
   character(LEN=50) :: key(1:5)
   logical :: QDO(1:7)
@@ -21,7 +21,7 @@ program main
   call read_prm('rL',rL)
   call read_prm('dL',dL)
   QDO = .false.
-  call read_prm('DO_QUAD',QDO(1:6))
+  call read_prm('DO_QUAD',QDO)
 
   !* read theoretical CMB power spectrum
   eL(1) = min(rL(1),dL(1))
@@ -30,8 +30,8 @@ program main
   call readcl_camb(UC,read_str('ucl'),eL)
   call readcl_camb(LC,read_str('lcl'),eL,.true.)
   l = linspace(1,eL(2))
-  UC(dd,:) = UC(dd,:)*(l*(l+1d0)/(2d0*pi)/l**4) !for P13
-  !LC(dd,:) = UC(dd,:) !for P15
+  !UC(dd,:) = UC(dd,:)*(l*(l+1d0)/(2d0*pi)/l**4) !for P13
+  LC(dd,:) = UC(dd,:) !for P15
 
   !* experimental noise if needed
   allocate(OC(7,eL(2)),Al(QMV,2,dL(2)),Nl(2,eL(2)))
@@ -41,11 +41,12 @@ program main
     key(3:5) = ['fwhm','sT','sP']
     call instnl(eL,Nl(1,:),Nl(2,:),mykey=key)
     OC(TT,:) = LC(TT,:) + Nl(1,:)
-    OC(EE,:) = LC(EE,:) + 2d0*Nl(1,:)
-    OC(BB,:) = LC(BB,:) + 2d0*Nl(1,:)
+    OC(EE,:) = LC(EE,:) + Nl(2,:)
+    OC(BB,:) = LC(BB,:) + Nl(2,:)
   end if
 
   !* rec noise calculation
+  !call al_interface(rL,dL,LC,OC,Al(:,1,:),Al(:,2,:),QDO,itern=10)
   call al_interface(rL,dL,LC,OC,Al(:,1,:),Al(:,2,:),QDO)
 
   !* computing residual Cl^BB

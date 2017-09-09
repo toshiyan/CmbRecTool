@@ -11,7 +11,7 @@ FLAGS = $(FLAG) #$(DBAG)
 ## Directories ##
 libroot = ../../../../
 MyLib = ${libroot}/mylib
-LAPACK = ${libroot}/LAPACK95
+LAPACK = ${libroot}/mylib/pub/LAPACK95
 
 MODD = -I$(LAPACK)/mod -I$(MyLib)/mod
 LIBD = -L$(LAPACK)/lib -L$(MyLib)/lib

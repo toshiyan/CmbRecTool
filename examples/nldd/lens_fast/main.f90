@@ -21,7 +21,7 @@ program main
 
   call read_prm('rL',rL)
   QDO = .false.
-  call read_prm('DO_QUAD',QDO(1:6))
+  call read_prm('DO_QUAD',QDO)
 
   !* read theoretical CMB power spectrum
   eL = [2,3000]
@@ -35,13 +35,14 @@ program main
   key(3:5) = ['fwhm','sT','sP']
   call instnl(eL,Nl(1,:),Nl(2,:),mykey=key)
   OC(TT,:) = LC(TT,:) + Nl(1,:)
-  OC(EE,:) = LC(EE,:) + Nl(1,:)*2d0
-  OC(BB,:) = LC(BB,:) + Nl(1,:)*2d0
+  OC(EE,:) = LC(EE,:) + Nl(2,:)
+  OC(BB,:) = LC(BB,:) + Nl(2,:)
   OC(TE,:) = LC(TE,:)
+  call savetxt('nl.dat',linspace(1,eL(2)),Nl(2,:),ow=.true.)
   deallocate(Nl)
 
   call al_interface(rL,eL,LC,OC,Al(:,1,:),Al(:,2,:),QDO)
-  call savetxt('al.dat',linspace(1,eL(2)),Al(QTT,1,:),Al(QTE,1,:),Al(QTB,1,:),Al(QEE,1,:),Al(QEB,1,:),ow=.true.)
+  call savetxt('al.dat',linspace(1,eL(2)),Al(QTT,1,:),Al(QTE,1,:),Al(QTB,1,:),Al(QEE,1,:),Al(QEB,1,:),Al(QMV,1,:),ow=.true.)
   deallocate(LC,UC,OC,Al)
 
 end program main
