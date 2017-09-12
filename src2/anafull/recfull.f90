@@ -20,7 +20,7 @@ subroutine quadtt(nsidet,Tlm1,Tlm2,fC,eL,rL,glm,clm)
   !I/O
   integer :: eL(2), rL(2), nsidet
   real(dl), intent(in) :: fC(:)
-  complex(dlc), intent(in), dimension(0:eL(2),0:eL(2)) :: Tlm1, Tlm2
+  complex(dlc), intent(in), dimension(0:rL(2),0:rL(2)) :: Tlm1, Tlm2
   complex(dlc), intent(inout), dimension(0:eL(2),0:eL(2)) :: glm, clm
   !internal
   integer :: l, npixt
@@ -291,7 +291,7 @@ subroutine quadeb(nsidet,Elm,Blm,fC,eL,tL,glm,clm)
   !I/O
   integer, intent(in) :: nsidet, eL(2), tL(2)
   real(dl), intent(in) :: fC(:)
-  complex(dlc), intent(in), dimension(0:eL(2),0:eL(2)) :: Elm, Blm
+  complex(dlc), intent(in), dimension(0:tL(2),0:tL(2)) :: Elm, Blm
   complex(dlc), intent(out), dimension(0:eL(2),0:eL(2)) :: glm, clm
   !internal
   integer :: l, npixt
