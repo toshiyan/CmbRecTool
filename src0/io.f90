@@ -12,6 +12,10 @@ module io
     module procedure loadfile_1d_d, loadfile_1d_c, loadfile_2d_d, loadfile_2d_c, loadfile_3d_d, loadfile_3d_c
   end interface loadfile
 
+  interface loadfile_py
+    module procedure loadfile_1d_d_py, loadfile_2d_d_py
+  end interface loadfile_py
+
   interface savefile
     module procedure savefile_1d_d, savefile_1d_c, savefile_2d_d, savefile_2d_c, savefile_3d_d, savefile_3d_c
   end interface savefile
@@ -91,6 +95,21 @@ subroutine loadfile_1d_c(f,d1,d2,d3,d4,d5,d6,d7,a)
   close(11)
 
 end subroutine loadfile_1d_c
+
+
+subroutine loadfile_1d_d_py(f,d1)
+  implicit none
+  !I/O
+  character(*), intent(in) :: f
+  double precision, intent(out) :: d1(:)
+  !internal
+  integer :: dummy
+
+  open(unit=20,file=trim(f),status='old',form='unformatted',access='stream')
+  read(20) dummy, d1
+  close(20)
+
+end subroutine loadfile_1d_d_py
 
 
 subroutine loadfile_2d_d(f,d1,d2,d3,d4,d5,d6,d7,ns,a)
@@ -186,6 +205,30 @@ subroutine loadfile_2d_c(f,d1,d2,d3,d4,d5,d6,d7,ns,a)
   close(20)
 
 end subroutine loadfile_2d_c
+
+
+subroutine loadfile_2d_d_py(f,d1,d2,d3,d4,d5,d6,d7)
+  implicit none
+  !I/O
+  character(*), intent(in) :: f
+  double precision, intent(out) :: d1(:,:)
+  double precision, intent(out), dimension(:,:), optional :: d2,d3,d4,d5,d6,d7
+  !internal
+  character(16) :: ac
+  integer :: i, dummy
+
+  !* read data from file
+  open(unit=20,file=trim(f),status='old',form='unformatted',access='stream')
+  read(20) dummy, d1
+  if (present(d2)) read(20) dummy, dummy, d2
+  if (present(d3)) read(20) dummy, dummy, d3
+  if (present(d4)) read(20) dummy, dummy, d4
+  if (present(d5)) read(20) dummy, dummy, d5
+  if (present(d6)) read(20) dummy, dummy, d6
+  if (present(d7)) read(20) dummy, dummy, d7
+  close(20)
+
+end subroutine loadfile_2d_d_py
 
 
 subroutine loadfile_3d_d(f,d1,d2,d3,d4,d5,d6,d7,ns,a)
