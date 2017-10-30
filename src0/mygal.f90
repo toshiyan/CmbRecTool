@@ -177,22 +177,23 @@ function integ_SF(zb,a,b,z0,sigma,zbias)  result(f)
 end function integ_SF
 
 
-subroutine ngal_SF(ngal,zb,a,b,z0,sigma,zbias)
+subroutine ngal_SF(frac,zb,a,b,z0,sigma,zbias)
   implicit none
   !I/O
   double precision, intent(in) :: zb(:), a,b,z0,sigma,zbias
-  double precision, intent(out) :: ngal(:)
+  double precision, intent(out) :: frac(:)
   !internal
   integer :: n, i, num
 
-  num = size(ngal)
-  ngal = 0d0
+  num  = size(frac)
+  frac = 0d0
   if (size(zb)/=num+1) stop 'error (ngal_SF): size of zb is strange'
 
   do n = 1, num
-    ngal(n) = integ_SF(zb(n:n+1),a,b,z0,sigma,zbias)
+    frac(n) = integ_SF(zb(n:n+1),a,b,z0,sigma,zbias)
   end do
-  write(*,*) 'ngal=', ngal
+  frac = frac/sum(frac)
+  write(*,*) 'frac ngal = ', frac
 
 end subroutine ngal_SF
 
