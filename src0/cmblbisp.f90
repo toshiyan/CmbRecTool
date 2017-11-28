@@ -65,12 +65,12 @@ subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl
   if (model=='') pki = pklini  !use linear 
   if (model/='') call NonLinRatios(pklini,z,ki,Ov,Om,w0,wa,fnu,pki) !nonlinear Pk
 
-  !* interpolate k, Pk at k=l/chi
-  call Limber_k2l(chi,ki,pki,kl,pl)  
-
   !* sigma_8
   s0 = dsqrt(pk2sigma(8d0/(H0/100d0),ki,pki(1,:)))
   write(*,*) 'sigma8 = ', s0
+
+  !* interpolate k, Pk at k=l/chi
+  call Limber_k2l(chi,ki,pki,kl,pl)  
 
   !* precompute F2-kernel coefficients a, b, c 
   if (model/='') call precompute_coeff_abc(D*s0,kl,ki,pklini,abc,model)
@@ -163,31 +163,6 @@ subroutine F2_Kernel(k,p1,p2,F2K)
   F2K = 5d0/7d0 * p1(1)*p2(1) + 0.5d0*(k(1)**2+k(2)**2)/(k(1)*k(2))*cost*p1(2)*p2(2) + 2d0/7d0*cost**2*p1(3)*p2(3)
 
 end subroutine F2_Kernel
-
-
-subroutine precompute_W3j(lmin,W3)
-! precomputing W3j symbols
-! require large memory for high l
-  implicit none
-  integer, intent(in) :: lmin
-  double precision, intent(out) :: W3(:,:,:)
-  integer :: lmax, l1, l2, l3
-
-  lmax = size(W3,dim=1)
-
-  do l1 = lmin, lmax
-    do l2 = l1, lmax
-      do l3 = l2, lmax
-        if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
-        if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
-        if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
-        if (mod(l1+l2+l3,2)==1) cycle
-        W3(l1,l2,l3) = W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
-      end do
-    end do
-  end do
-
-end subroutine precompute_W3j
 
 
 subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype)
@@ -311,52 +286,49 @@ subroutine bisp_postborn(l1,l2,l3,wp,ck,bisp)
 end subroutine bisp_postborn
 
 
-subroutine sum_bisp(l1,lmax,zn,k,Pk,Cl,fac,abc,snr,bl,ss)
+function snr_bisp(eL,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
 ! SNR sum of LSS bispectrum
   implicit none
-  integer, intent(in) :: l1, lmax, zn
-  double precision, intent(in) :: k(:,:), Pk(:,:), Cl(:), fac(:), abc(:,:,:)
-  double precision, intent(out) :: snr, bl(:,:)
-  double precision, intent(out), optional :: ss(:,:)
-  integer :: l2, l3, i
-  double precision :: cov, Del, bisp, tot, F2(1:3)
+  integer, intent(in) :: eL(2), zn
+  double precision, intent(in) :: k(:,:), Pk(:,:), Cl(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
+  integer :: l1, l2, l3, i
+  double precision :: f(2), cov, Del, bisp(2), tot(2), F2(1:3)
 
   tot = 0d0
-  do l2 = l1, lmax
-    do l3 = l2, lmax
-      if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
-      if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
-      if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
-      if (mod(l1+l2+l3,2)==1) cycle
-      Del = 1d0
-      if (l1==l2.and.l2/=l3) Del = 2d0
-      if (l1/=l2.and.l2==l3) Del = 2d0
-      if (l1==l2.and.l2==l3) Del = 6d0
-      bisp = 0d0
-      !compute F2 kernel at each z, and take sum
-      do i = 1, zn
-        call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
-        call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
-        call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
-        bisp = bisp + fac(i) * (F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
+  do l1 = eL(1), eL(2)
+    write(*,*) l1
+    do l2 = l1, eL(2)
+      do l3 = l2, eL(2)
+        if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
+        if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
+        if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
+        if (mod(l1+l2+l3,2)==1) cycle
+        Del = 1d0
+        if (l1==l2.and.l2/=l3) Del = 2d0
+        if (l1/=l2.and.l2==l3) Del = 2d0
+        if (l1==l2.and.l2==l3) Del = 6d0
+        bisp = 0d0
+        !compute F2 kernel at each z, and take sum
+        do i = 1, zn
+          call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
+          call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
+          call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
+          bisp(1) = bisp(1) + fac(i) * (F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
+        end do
+        bisp(2) = bisp(1)
+        call bisp_postborn(l1,l2,l3,wp,ck,bisp(2))
+        !flat sky -> full sky
+        bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
+        !SNR
+        cov = Del*Cl(l1)*Cl(l2)*Cl(l3)
+        tot = tot + bisp**2/cov
       end do
-      !specific configuration
-      if (l1==l2.and.l2==l3)    bl(1,l1) = bisp !equilateral
-      if (l1==l2.and.l1+l2==l3) bl(2,l1) = bisp !folded
-      if (l2==l3.and.l1==2)     bl(3,l2) = bisp !squeezed
-      if (l2==l3.and.l1==10)    bl(4,l2) = bisp !squeezed
-      if (l2==l3.and.l1==100)   bl(5,l2) = bisp !squeezed
-      !flat sky -> full sky
-      bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
-      !SNR
-      cov = Del*Cl(l1)*Cl(l2)*Cl(l3)
-      tot = tot + bisp**2/cov
-      if (present(ss)) ss(l2,l3) = bisp**2/cov
     end do
   end do
-  snr = tot
 
-end subroutine sum_bisp
+  f = tot
+
+end function snr_bisp
 
 
 subroutine get_knl(k,Pk,knl)
@@ -459,48 +431,30 @@ subroutine precompute_postborn(dchi,chi,chis,wlf,kl,pl,wp,ck)
 end subroutine precompute_postborn
 
 
-#ifdef all
-subroutine sum_bisp(l1,lmax,zn,k,Pk,Cl,fac,abc,snr,bl)
-! SNR sum of bispectrum
+subroutine precompute_W3j(lmin,W3)
+! precomputing W3j symbols
+! require large memory for high l
   implicit none
-  integer, intent(in) :: l1, lmax, zn
-  double precision, intent(in) :: k(:,:), Pk(:,:), Cl(:), fac(:), abc(:,:,:)
-  double precision, intent(out) :: snr, bl(:,:)
-  integer :: l2, l3, i
-  double precision :: cov, Del, bisp, tot, F2(1:3)
+  integer, intent(in) :: lmin
+  double precision, intent(out) :: W3(:,:,:)
+  integer :: lmax, l1, l2, l3
 
-  tot = 0d0
-  do l2 = l1, lmax
-    do l3 = l2, lmax
-      if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
-      if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
-      if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
-      if (mod(l1+l2+l3,2)==1) cycle
-      Del = 1d0
-      if (l1==l2.and.l2/=l3) Del = 2d0
-      if (l1/=l2.and.l2==l3) Del = 2d0
-      if (l1==l2.and.l2==l3) Del = 6d0
-      bisp = 0d0
-      do i = 1, zn
-        call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
-        call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
-        call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
-        bisp = bisp + fac(i) * (F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
+  lmax = size(W3,dim=1)
+
+  do l1 = lmin, lmax
+    do l2 = l1, lmax
+      do l3 = l2, lmax
+        if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
+        if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
+        if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
+        if (mod(l1+l2+l3,2)==1) cycle
+        W3(l1,l2,l3) = W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
       end do
-      bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
-      if (l1==l2.and.l2==l3)    bl(1,l1) = bisp
-      if (l1==l2.and.l1+l2==l3) bl(2,l1) = bisp
-      if (l2==l3.and.l1==2)     bl(3,l2) = bisp
-      if (l2==l3.and.l1==10)    bl(4,l2) = bisp
-      if (l2==l3.and.l1==100)   bl(5,l2) = bisp
-      cov = Del*Cl(l1)*Cl(l2)*Cl(l3)
-      tot = tot + bisp**2/cov
     end do
   end do
-  snr = tot
 
-end subroutine sum_bisp
-#endif all
+end subroutine precompute_W3j
+
 
 
 end module cmblbisp
