@@ -15,30 +15,33 @@ module cmblbisp
 contains
 
 
-subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl,fac,abc,wp,ck)
+subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype)
 ! compute k and Pk at k=l/chi, factor (fac) for LSS bispectrum, F2-kernel coefficients (abc), 
 ! weighted potential spectrum (wp), and kappa spectrum at [chi,chi_s] (ck)
   implicit none
 
   ![input]
   ! model  --- nonlinear matter bispectrum fitting model ('' for linear)
+  ! btype  --- type of bispectrum (kkk,gkk,ggk)
   ! z, dz  --- redshift points and thier interval
   ! zs     --- source z
   ! H0, Ov, Om, w0, wa, fnu --- cosmological parameters
   ! ki     --- CAMB output k
   ! pklin0 --- CAMB output P(k,z=0)
   character(*), intent(in) :: model
+  character(*), intent(in), optional :: btype
   double precision, intent(in)  :: z(:), dz(:), zs, H0, Ov, Om, w0, wa, fnu, ki(:), pklin0(:)
 
   ![output]
   ! kl, pl --- k and Pk at k=l/chi
-  ! fac    --- factor for LSS bispectrum
+  ! zker   --- z factor for LSS bispectrum
   ! abc    --- F2-kernel coefficients
   ! wp     --- weighted potential power spectrum
   ! ck     --- kappa power spectrum at [chi,chis_s]
-  double precision, intent(out) :: kl(:,:), pl(:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
+  double precision, intent(out) :: kl(:,:), pl(:,:), zker(:), abc(:,:,:), wp(:,:), ck(:,:)
 
   !internal
+  character(4) :: bisptype
   integer :: i, zn, kn
   double precision :: s0, chis
   double precision, allocatable :: Hz(:), chi(:), D(:), wlf(:), pki(:,:), pklini(:,:)
@@ -55,15 +58,28 @@ subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl
     Hz(i)  = H_z(z(i),[H0,Ov,Om,w0,wa])  !expansion rate at z
     chi(i) = C_z(z(i),[H0,Ov,Om,w0,wa])  !comoving distance at z
   end do
-  wlf = 1.5d0*Om*(H0/3d5)**2*(1d0+z)                !matter -> potential conversion factor (matter dominant)
-  fac = dz/Hz * (wlf*(chis-chi)/chis)**3 * 2d0/chi  !used for LSS bispectrum
+  wlf = 1.5d0*Om*(H0/3d5)**2*(1d0+z)     !matter -> potential conversion factor (matter dominant)
+
+  ! choose kernel for z integral
+  bisptype = 'kkk'
+  if (present(btype)) bisptype = btype
+  select case (bisptype)
+  case ('kkk')
+    zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**3 * 2d0/chi**4 
+  case ('gkk')
+    zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
+  case ('ggk')
+    zker = dz/Hz * (wlf*(chis-chi)*chi/chis) * 2d0/chi**4 * Hz**2
+  case default
+    stop 'need z-kernel type'
+  end select
 
   !* get linear and non-linear Pk at each z
   do i = 1, zn
     pklini(i,:) = D(i)**2*pklin0  !linear P(k,z) (i=1 -> z=0)
   end do
-  if (model=='') pki = pklini  !use linear 
-  if (model/='') call NonLinRatios(pklini,z,ki,Ov,Om,w0,wa,fnu,pki) !nonlinear Pk
+  if (model=='')  pki = pklini  !use linear 
+  if (model/='')  call NonLinRatios(pklini,z,ki,Ov,Om,w0,wa,fnu,pki) !nonlinear Pk
 
   !* sigma_8
   s0 = dsqrt(pk2sigma(8d0/(H0/100d0),ki,pki(1,:)))
@@ -73,7 +89,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl
   call Limber_k2l(chi,ki,pki,kl,pl)  
 
   !* precompute F2-kernel coefficients a, b, c 
-  if (model/='') call precompute_coeff_abc(D*s0,kl,ki,pklini,abc,model)
+  if (model/='')  call precompute_coeff_abc(D*s0,kl,ki,pklini,abc,model)
 
   !* precompute for post born
   call precompute_postborn(dz/Hz,chi,chis,wlf,kl,pl,wp,ck)
@@ -284,6 +300,47 @@ subroutine bisp_postborn(l1,l2,l3,wp,ck,bisp)
   bisp = bisp + l3l1/(2d0*al3**2*al1**2)*(l2l3*al3**4*sum(wp(:,l3)*ck(:,l1))+l1l2*al1**4*sum(wp(:,l1)*ck(:,l3)))
 
 end subroutine bisp_postborn
+
+
+function snr_gkk(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck)  result(f)
+! SNR sum of gkk bispectrum
+  implicit none
+  integer, intent(in) :: eL(2), zn
+  double precision, intent(in) :: k(:,:), Pk(:,:), cgg(:), ckk(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
+  integer :: l1, l2, l3, i
+  double precision :: f(2), cov, Del, bisp(2), tot(2), F2(1:3)
+
+  tot = 0d0
+  do l1 = eL(1), eL(2)
+    write(*,*) l1
+    do l2 = eL(1), eL(2)
+      do l3 = l2, eL(2)
+        if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
+        if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
+        if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
+        if (mod(l1+l2+l3,2)==1) cycle
+        Del = 1d0
+        if (l2==l3) Del = 2d0
+        bisp = 0d0
+        !compute F2 kernel at each z, and take sum
+        do i = 1, zn
+          call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
+          call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
+          call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
+          bisp(1) = bisp(1) + fac(i) * (F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
+        end do
+        !flat sky -> full sky
+        bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
+        !SNR
+        cov = Del*cgg(l1)*ckk(l2)*ckk(l3)
+        tot = tot + bisp**2/cov
+      end do
+    end do
+  end do
+
+  f = tot
+
+end function snr_gkk
 
 
 function snr_bisp(eL,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)

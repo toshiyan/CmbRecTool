@@ -3,7 +3,7 @@
 !////////////////////////////////////////////////////!
 
 module utils_galaxy
-  use funcs, only: erfc
+  use funcs,   only: erfc, lnGamma
   use myutils, only: linspace
   implicit none
 
@@ -24,18 +24,29 @@ module utils_galaxy
     double precision :: fsky = 0.5d0, Ngal = 100.d0, zm = 1.5d0
   end type LSST
 
-  private erfc
+  private erfc, lnGamma
   private linspace
 
 contains
 
 
+function z0_SF(a,b,zm)  result(f)
+  implicit none
+  double precision, intent(in) :: a,b,zm
+  double precision :: f
+
+  f = zm * dexp(lnGamma((a+1d0)/b)-lnGamma((a+2d0)/b))
+
+end function z0_SF
+
+
 function nz_SF_scal(z,a,b,z0)  result(f)
   implicit none
   double precision, intent(in) :: z,a,b,z0
-  double precision :: f
+  double precision :: f, N
 
-  f = z**a*dexp(-(z/z0)**b)
+  N = b / (z0*dexp(lnGamma((a+1d0)/b)))
+  f = (z/z0)**a*dexp(-(z/z0)**b)
 
 end function nz_SF_scal
 
@@ -44,10 +55,11 @@ function nz_SF_arr(z,a,b,z0) result(f)
   implicit none
   double precision, intent(in) :: z(:),a,b,z0
   integer :: i
-  double precision :: f(size(z))
+  double precision :: N, f(size(z))
 
+  N = b / (z0*dexp(lnGamma((a+1d0)/b)))
   do i = 1, size(z)
-    f(i) = z(i)**a*dexp(-(z(i)/z0)**b)
+    f(i) = N*(z(i)/z0)**a*dexp(-(z(i)/z0)**b)
   end do
 
 end function nz_SF_arr

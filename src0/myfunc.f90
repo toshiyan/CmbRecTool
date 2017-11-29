@@ -17,6 +17,19 @@ module myfunc
 
 contains
 
+! for aps calculation
+function kernel_cgg(z,cp)  result(f)
+  implicit none
+  double precision, intent(in) :: z(:), cp(5)
+  integer :: i
+  double precision :: f(size(z))
+
+  do i = 1, size(z)
+    f(i) = H_z(z(i),cp) / (C_z(z(i),cp))**2
+  end do
+
+end function kernel_cgg
+
 
 function omega_m(aa,om_m0,om_v0,wval,waval) 
 ! Omega_m(a) = rho_m(a) / rho_c(a)
