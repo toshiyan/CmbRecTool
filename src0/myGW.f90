@@ -4,7 +4,7 @@
 
 module utils_gw
   use myconst, only: pi
-  use myfunc, only: C_z, H_z, dL_dz, dH_dz
+  use myfunc,  only: C_z, H_z, dL_dz, dH_dz, cosmoparams
   use myutils, only: linspace
   implicit none
 
@@ -13,12 +13,13 @@ module utils_gw
 contains
 
 
-function mean_Lz(zb,hzcp,hzcpf,ntype)  result(f)
+function mean_Lz(zb,cp,cp0,ntype)  result(f)
 ! * Mean luminosity-distance times total number (d_L x N_i)
 !
   implicit none
+  type(cosmoparams), intent(in) :: cp, cp0
   integer, intent(in) :: ntype
-  double precision, intent(in) :: zb(1:2), hzcp(1:5), hzcpf(1:5)
+  double precision, intent(in) :: zb(1:2)
   integer :: j
   double precision :: f, z(1:10000), nd, dz, CzHz(1:2), CzHzf(1:2)
 
@@ -26,22 +27,23 @@ function mean_Lz(zb,hzcp,hzcpf,ntype)  result(f)
   z  = linspace(zb,10000)
   dz = z(2)-z(1)
   do j = 1, 10000
-    CzHzf = [C_z(z(j),hzcpf), H_z(z(j),hzcpf)]
+    CzHzf = [C_z(z(j),cp0), H_z(z(j),cp0)]
     nd    = nz_gw(z(j),CzHzf,ntype)/(dL_dz(z(j),CzHzf)) ! fixed cosmology
     ! changing variable from d_L to z
-    CzHz  = [C_z(z(j),hzcp), H_z(z(j),hzcp)]
+    CzHz  = [C_z(z(j),cp), H_z(z(j),cp)]
     f     = f + dz*dL_dz(z(j),CzHz) * CzHz(1)*(1d0+z(j)) * nd 
   end do
 
 end function mean_Lz
 
 
-function mean_Nz(zb,hzcp,hzcpf,ntype)  result(f)
+function mean_Nz(zb,cp,cp0,ntype)  result(f)
 ! * Total number (N_i)
 !
   implicit none
+  type(cosmoparams), intent(in) :: cp, cp0
   integer, intent(in) :: ntype
-  double precision, intent(in) :: zb(1:2), hzcp(1:5), hzcpf(1:5)
+  double precision, intent(in) :: zb(1:2)
   integer :: j
   double precision :: f, z(1:10000), nd, dz, CzHz(1:2), CzHzf(1:2)
 
@@ -49,10 +51,10 @@ function mean_Nz(zb,hzcp,hzcpf,ntype)  result(f)
   z  = linspace(zb,10000)
   dz = z(2)-z(1)
   do j = 1, 10000
-    CzHzf = [C_z(z(j),hzcpf), H_z(z(j),hzcpf)]
+    CzHzf = [C_z(z(j),cp0), H_z(z(j),cp0)]
     nd    = nz_gw(z(j),CzHzf,ntype)/(dL_dz(z(j),CzHzf)) ! fixed cosmology
     ! changing variable from d_L to z
-    CzHz  = [C_z(z(j),hzcp), H_z(z(j),hzcp)]
+    CzHz  = [C_z(z(j),cp), H_z(z(j),cp)]
     f     = f + dz*dL_dz(z(j),CzHz) * nd 
   end do
 

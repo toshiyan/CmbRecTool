@@ -5,17 +5,17 @@
 module cmblbisp
   use myconst, only: pi
   use myutils, only: neighb, spline
-  use myfunc,  only: C_z, H_z, NonLinRatios, Dz_array, pk2sigma
+  use myfunc,  only: C_z, H_z, D_z, NonLinRatios, pk2sigma, cosmoparams
   implicit none
 
   private pi
   private neighb, spline
-  private C_z, H_z, NonLinRatios, Dz_array, pk2sigma
+  private C_z, H_z, D_z, NonLinRatios, pk2sigma, cosmoparams
 
 contains
 
 
-subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype)
+subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype)
 ! compute k and Pk at k=l/chi, factor (fac) for LSS bispectrum, F2-kernel coefficients (abc), 
 ! weighted potential spectrum (wp), and kappa spectrum at [chi,chi_s] (ck)
   implicit none
@@ -25,12 +25,13 @@ subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl
   ! btype  --- type of bispectrum (kkk,gkk,ggk)
   ! z, dz  --- redshift points and thier interval
   ! zs     --- source z
-  ! H0, Ov, Om, w0, wa, fnu --- cosmological parameters
+  ! cp     --- cosmological parameters
   ! ki     --- CAMB output k
   ! pklin0 --- CAMB output P(k,z=0)
+  type(cosmoparams), intent(in) :: cp
   character(*), intent(in) :: model
   character(*), intent(in), optional :: btype
-  double precision, intent(in)  :: z(:), dz(:), zs, H0, Ov, Om, w0, wa, fnu, ki(:), pklin0(:)
+  double precision, intent(in)  :: z(:), dz(:), zs, ki(:), pklin0(:)
 
   ![output]
   ! kl, pl --- k and Pk at k=l/chi
@@ -49,16 +50,14 @@ subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl
   zn = size(z)  !number of z points for z-integral
   kn = size(ki) !number of CAMB output k
 
-  allocate(Hz(zn),chi(zn),D(zn),wlf(zn),pklini(zn,kn),pki(zn,kn))
-
   !* get distances and lensing weights
-  call Dz_array(z,Om,Ov,w0,wa,D)         !growth factor
-  chis = C_z(zs,[H0,Ov,Om,w0,wa])        !source comoving distance
-  do i = 1, zn
-    Hz(i)  = H_z(z(i),[H0,Ov,Om,w0,wa])  !expansion rate at z
-    chi(i) = C_z(z(i),[H0,Ov,Om,w0,wa])  !comoving distance at z
-  end do
-  wlf = 1.5d0*Om*(H0/3d5)**2*(1d0+z)     !matter -> potential conversion factor (matter dominant)
+  allocate(Hz(zn),chi(zn),D(zn),wlf(zn),pklini(zn,kn),pki(zn,kn))
+  D    = D_z(z,cp)  !growth factor
+  chis = C_z(zs,cp) !source comoving distance
+  chi  = C_z(z,cp)  !comoving distance at each z
+  Hz   = H_z(z,cp)  !expansion rate at z
+
+  wlf  = 1.5d0*cp%Om*(cp%H0/3d5)**2*(1d0+z) !matter -> potential conversion factor (matter dominant)
 
   ! choose kernel for z integral
   bisptype = 'kkk'
@@ -79,10 +78,10 @@ subroutine prep_lens_bispectrum(z,dz,zs,H0,Ov,Om,w0,wa,fnu,ki,pklin0,model,kl,pl
     pklini(i,:) = D(i)**2*pklin0  !linear P(k,z) (i=1 -> z=0)
   end do
   if (model=='')  pki = pklini  !use linear 
-  if (model/='')  call NonLinRatios(pklini,z,ki,Ov,Om,w0,wa,fnu,pki) !nonlinear Pk
+  if (model/='')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
 
   !* sigma_8
-  s0 = dsqrt(pk2sigma(8d0/(H0/100d0),ki,pki(1,:)))
+  s0 = dsqrt(pk2sigma(8d0/(cp%H0/100d0),ki,pki(1,:)))
   write(*,*) 'sigma8 = ', s0
 
   !* interpolate k, Pk at k=l/chi
@@ -302,9 +301,10 @@ subroutine bisp_postborn(l1,l2,l3,wp,ck,bisp)
 end subroutine bisp_postborn
 
 
-function snr_gkk(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck)  result(f)
-! SNR sum of gkk bispectrum
+function snr_xbisp(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck,btype)  result(f)
+! SNR sum of gkk or ggk bispectrum
   implicit none
+  character(*), intent(in) :: btype
   integer, intent(in) :: eL(2), zn
   double precision, intent(in) :: k(:,:), Pk(:,:), cgg(:), ckk(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
   integer :: l1, l2, l3, i
@@ -312,7 +312,7 @@ function snr_gkk(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck)  result(f)
 
   tot = 0d0
   do l1 = eL(1), eL(2)
-    write(*,*) l1
+    if (mod(l1,10)==0) write(*,*) l1
     do l2 = eL(1), eL(2)
       do l3 = l2, eL(2)
         if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
@@ -332,7 +332,8 @@ function snr_gkk(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck)  result(f)
         !flat sky -> full sky
         bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
         !SNR
-        cov = Del*cgg(l1)*ckk(l2)*ckk(l3)
+        if (btype=='gkk') cov = Del*cgg(l1)*ckk(l2)*ckk(l3)
+        if (btype=='ggk') cov = Del*ckk(l1)*cgg(l2)*cgg(l3)
         tot = tot + bisp**2/cov
       end do
     end do
@@ -340,7 +341,7 @@ function snr_gkk(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck)  result(f)
 
   f = tot
 
-end function snr_gkk
+end function snr_xbisp
 
 
 function snr_bisp(eL,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)

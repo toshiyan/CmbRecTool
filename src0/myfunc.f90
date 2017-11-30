@@ -7,6 +7,23 @@ module myfunc
   use myutils, only: gl_initialize, gl_finalize, gauss_legendre_params, GLdxs, GLpoint, neighb
   implicit none
 
+  interface C_z
+    module procedure C_z_single, C_z_array
+  end interface
+
+  interface D_z
+    module procedure D_z_single, D_z_array
+  end interface
+
+  interface H_z
+    module procedure H_z_single, H_z_array
+  end interface
+
+  !* cosmological parameters
+  type cosmoparams !nu=On/Om
+    double precision :: h=0.7d0, H0=70d0, Ov=0.7d0, Om=0.3d0, Ok=0d0, w0=-1d0, wa=0d0, nu=4.38225537d-2, On=1.31467661d-2
+  end type cosmoparams
+
   !* local parameters
   double precision, parameter :: c = 2.99792458d5
   double precision, parameter :: pi = 3.1415926535897932384626433832795d0
@@ -17,10 +34,12 @@ module myfunc
 
 contains
 
+
 ! for aps calculation
 function kernel_cgg(z,cp)  result(f)
   implicit none
-  double precision, intent(in) :: z(:), cp(5)
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: z(:)
   integer :: i
   double precision :: f(size(z))
 
@@ -31,26 +50,30 @@ function kernel_cgg(z,cp)  result(f)
 end function kernel_cgg
 
 
-function omega_m(aa,om_m0,om_v0,wval,waval) 
+function omega_m(a,cp) 
 ! Omega_m(a) = rho_m(a) / rho_c(a)
   implicit none
-  double precision :: omega_m,omega_t,om_m0,om_v0,aa,wval,waval,Qa2
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: a
+  double precision :: omega_m, omega_t, Qa2
 
-  Qa2= aa**(-1d0-3d0*(wval+waval))*dexp(-3d0*(1d0-aa)*waval)
-  omega_t = 1d0 + (om_m0+om_v0-1d0)/(1d0-om_m0-om_v0+om_v0*Qa2+om_m0/aa)
-  omega_m = omega_t*om_m0/(om_m0+om_v0*aa*Qa2)
+  Qa2     = a**(-1d0-3d0*(cp%w0+cp%wa))*dexp(-3d0*(1d0-a)*cp%wa)
+  omega_t = 1d0 - cp%Ok/(cp%Ok+cp%Ov*Qa2+cp%Om/a)
+  omega_m = omega_t*cp%Om/(cp%Om+cp%Ov*a*Qa2)
 
 end function omega_m
 
 
-function omega_v(aa,om_m0,om_v0,wval,waval) 
+function omega_v(a,cp) 
 ! Omega_v = rho_v(a) / rho_c(a)
   implicit none
-  double precision :: aa,omega_v,om_m0,om_v0,omega_t,wval,waval,Qa2
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: a
+  double precision :: omega_v, omega_t, Qa2
 
-  Qa2 = aa**(-1d0-3d0*(wval+waval))*dexp(-3d0*(1d0-aa)*waval)
-  omega_t = 1d0+(om_m0+om_v0-1d0)/(1d0-om_m0-om_v0+om_v0*Qa2+om_m0/aa)
-  omega_v = omega_t*om_v0*Qa2/(om_v0*Qa2+om_m0/aa)
+  Qa2     = a**(-1d0-3d0*(cp%w0+cp%wa))*dexp(-3d0*(1d0-a)*cp%wa)
+  omega_t = 1d0 - cp%Ok/(cp%Ok+cp%Ov*Qa2+cp%Om/a)
+  omega_v = omega_t*cp%Ov*Qa2/(cp%Ov*Qa2+cp%Om/a)
 
 end function omega_v
 
@@ -71,11 +94,12 @@ function wpca(a,wi,dz,b)  result(w)
 end function wpca
 
 
-function rho_de(a,rhov,w0,wa,wpca,dz)  result(f)
+function rho_de(a,cp,wpca,dz)  result(f)
 ! * energy density of DE
   implicit none
-  double precision, intent(in) :: a, rhov, w0
-  double precision, intent(in), optional :: wa, wpca(:), dz
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: a
+  double precision, intent(in), optional :: wpca(:), dz
   integer :: i , N
   double precision :: f, z
 
@@ -85,41 +109,35 @@ function rho_de(a,rhov,w0,wa,wpca,dz)  result(f)
       if ( dz*dble((i-1)) <= z .and. z< dz*dble(i)) N = i
     end do
     if(N>1) then
-      f = rhov
+      f = cp%Ov
       do i = 1, N-1
         f = f*(1d0+dz*dble(i))**(3d0*(wpca(i)-wpca(i+1)))
       end do
       f = f*a**(-3d0*(1d0+wpca(N)))
     else !outer region
-      f = f*a**(-3d0*(1d0+w0))
+      f = f*a**(-3d0*(1d0+cp%w0))
     end if
-  else if (present(wa)) then
-    f = rhov*a**(-3d0*(1d0+w0+wa))*dexp(-3d0*wa*(1d0-a))
   else
-    f = rhov*a**(-3d0*(1d0+w0))
+    f = cp%Ov*a**(-3d0*(1d0+cp%w0+cp%wa))*dexp(-3d0*cp%wa*(1d0-a))
   end if
 
 end function rho_de
 
 
-function drho_da_de(a,rhov,w0,wa)  result(f)  
+function drho_da_de(a,cp)  result(f)  
 ! * d(rho)/da
   implicit none
-  double precision, intent(in) :: a, rhov, w0
-  double precision, intent(in), optional :: wa
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: a
   integer :: i , N
   double precision :: f
 
-  if(present(wa)) then
-    f = rho_de(a,rhov,w0,wa)*((-3d0*(1d0+w0+wa))/a+3d0*wa)
-  else
-    f = rho_de(a,rhov,w0)*(-3d0*(1d0+w0))/a
-  end if
+  f = rho_de(a,cp)*((-3d0*(1d0+cp%w0+cp%wa))/a+3d0*cp%wa)
 
 end function drho_da_de
 
 
-function g_factor(z,Om,Ov,w) 
+function g_factor(z,Om,Ov,wz) 
 !* growth factor 
 ! D(a) = a in matter dominated universe. See Eq.(3.8) of arXiv:1105.4825.
   implicit none
@@ -128,54 +146,66 @@ function g_factor(z,Om,Ov,w)
 ! z  --- redshift
 ! Om --- Omega_m at z=0
 ! Ov --- Omega_v at z=0
-! w  --- w(a) at input z
-  double precision, intent(in) :: z, Om, Ov, w
+! wz --- w(a) at input z
+  double precision, intent(in) :: z, Om, Ov, wz
 !
 ! [internal]
   double precision :: g_factor, a, b, c, zz, gz
 
-  a = -1d0 / (3d0 * w)
-  b = (w - 1d0)/ (2d0 * w)
-  c = 1d0 - 5d0 / (6d0 * w)
-  zz = (-Ov/Om) * (1d0+z)**(3d0*w)
+  a = -1d0 / (3d0 * wz)
+  b = (wz - 1d0)/ (2d0 * wz)
+  c = 1d0 - 5d0 / (6d0 * wz)
+  zz = (-Ov/Om) * (1d0+z)**(3d0*wz)
   call HYGFX(a,b,c,zz,gz)
   g_factor = gz/(1d0+z)
 
 end function g_factor
 
 
-subroutine Dz_array(z,Om,Ov,w0,wa,D)
-!* Array of linear growth rate
+function D_z_single(z,cp)  result(f)
+!* Linear growth rate
   implicit none
-  double precision, intent(in) :: z(:), Om, Ov, w0, wa
-  double precision, intent(out) :: D(:)
-  integer :: i
-  double precision :: a, w
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: z
+  double precision :: a, w, f
 
-  D = 1d0
+  a = 1d0/(1d0+z)
+  w = cp%w0 + (1d0-a)*cp%wa
+  f = g_factor(z,cp%Om,cp%Ov,w)/g_factor(0d0,cp%Om,cp%Ov,w)
+
+end function D_z_single
+
+
+function D_z_array(z,cp)  result(f)
+  implicit none
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: z(:)
+  integer :: i
+  double precision :: f(size(z))
+
+  f = 1d0
   do i = 1, size(z)
-    a    = 1d0/(1d0+z(i))
-    w    = w0 + (1d0-a)*wa
     if (z(i)==0d0) cycle
-    D(i) = g_factor(z(i),Om,Ov,w)/g_factor(0d0,Om,Ov,w)
+    f(i) = D_z_single(z(i),cp)
   end do
 
-end subroutine Dz_array
+end function D_z_array
 
 
 !//// Cosmological Distance ////!
 
-function C_z(z,hzcp,n)  result(f)
+function C_z_single(z,cp,n)  result(f)
 ! * computing the comoving distance
 ! 
   implicit none
 ! [inputs]
-!   z       --- redshift
-!   hzcp(5) --- array containing [H0,OL,Om,w0,wa]
-  double precision, intent(in) :: z, hzcp(:)
+!   z  --- redshift
+!   cp --- containing [H0,OL,Om,w0,wa]
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: z
 !
 ! (optional)
-!   n       --- number of GL points
+!   n  --- number of GL points
   integer, intent(in), optional :: n
 !
 ! [internal]
@@ -191,12 +221,27 @@ function C_z(z,hzcp,n)  result(f)
   do i = 1, GL%n
     dz = 0.5d0*z*GL%w(i)
     zi = 0.5d0*z*(1d0+GL%z(i))
-    f = f + dz/H_z(zi,hzcp)
+    f = f + dz/H_z(zi,cp)
   end do
 
   call gl_finalize(GL)
 
-end function C_z
+end function C_z_single
+
+
+function C_z_array(z,cp)  result(f)
+  implicit none
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: z(:)
+  integer :: i
+  double precision :: f(size(z))
+
+  f = 0d0
+  do i = 1, size(z)
+    f(i) = C_z_single(z(i),cp)
+  end do
+
+end function C_z_array
 
 
 function r_s(z,Omh,Obh,Orh,n)  result(f)
@@ -239,74 +284,82 @@ function r_s(z,Omh,Obh,Orh,n)  result(f)
 end function r_s
 
 
-function L_z(z,Cz,hzcp)  result(f)
+function L_z(z,Cz,cp)  result(f)
 ! * Luminosity distance
   implicit none
+  type(cosmoparams), intent(in), optional :: cp
   double precision, intent(in) :: z
-  double precision, intent(in), optional :: Cz, hzcp(:)
+  double precision, intent(in), optional :: Cz
   double precision :: f
 
-  if (present(hzcp)) f = C_z(z,hzcp)*(1d0+z)
-  if (present(Cz))   f = Cz*(1d0+z)
+  if (present(cp)) f = C_z(z,cp)*(1d0+z)
+  if (present(Cz)) f = Cz*(1d0+z)
 
 end function L_z
 
 
-function dL_dz(z,CzHz,hzcp)  result(f)
+function dL_dz(z,CzHz,cp)  result(f)
   implicit none
+  type(cosmoparams), intent(in), optional :: cp
   double precision, intent(in) :: z
-  double precision, optional :: CzHz(1:2), hzcp(1:5)
+  double precision, optional :: CzHz(1:2)
   double precision :: f
 
-  if (present(hzcp)) f = C_z(z,hzcp) + (1d0+z)/H_z(z,hzcp)
+  if (present(cp))   f = C_z(z,cp) + (1d0+z)/H_z(z,cp)
   if (present(CzHz)) f = CzHz(1) + (1d0+z)/CzHz(2)
 
 end function dL_dz
 
 
-function H_z(z,hzcp)  result(f)
+function H_z_single(z,cp)  result(f)
   implicit none
-  double precision, intent(in) :: z, hzcp(1:5)
-  double precision :: f, Ok, a, H0, OL, Om, w0, wa
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: z
+  double precision :: f, a
 
-  H0 = hzcp(1)
-  OL = hzcp(2)
-  Om = hzcp(3)
-  w0 = hzcp(4)
-  wa = hzcp(5)
   a  = 1d0/(1d0+z)
-  Ok = 1d0 - Om - OL
-  if (w0==-1d0.and.wa==0d0) then
-    f = (H0/c)*dsqrt(Ok*(1d0+z)**2+Om*(1d0+z)**3+OL)
+  if (cp%w0==-1d0.and.cp%wa==0d0) then
+    f = dsqrt(cp%Ok/a**2+cp%Om/a**3+cp%Ov)
   else
-    f = (H0/c)*dsqrt(Ok*(1d0+z)**2+Om*(1d0+z)**3+rho_de(a,OL,w0,wa))
+    f = dsqrt(cp%Ok/a**2+cp%Om/a**3+rho_de(a,cp))
   end if
+  f = (cp%H0/c)*f
 
-end function H_z
+end function H_z_single
 
 
-function dH_dz(z,hzcp)  result(f)
+function H_z_array(z,cp)  result(f)
   implicit none
-  double precision, intent(in) :: z, hzcp(1:5)
-  double precision :: f, Ok, a, H0, OL, Om, w0, wa
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: z(:)
+  integer :: i
+  double precision :: f(size(z))
 
-  H0 = hzcp(1)
-  OL = hzcp(2)
-  Om = hzcp(3)
-  w0 = hzcp(4)
-  wa = hzcp(5)
+  f = 0d0
+  do i = 1, size(z)
+    f(i) = H_z_single(z(i),cp)
+  end do
+
+end function H_z_array
+
+
+function dH_dz(z,cp)  result(f)
+  implicit none
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: z
+  double precision :: f, a
+
   a  = 1d0/(1d0+z)
-  Ok = 1d0 - Om - OL
-  if (w0==-1d0.and.wa==0d0) then
-    f = (H0/c)*((1d0+z)*Ok+1.5d0*(1d0+z)**2*Om)/dsqrt(Om*(1d0+z)**3+OL)
+  if (cp%w0==-1d0.and.cp%wa==0d0) then
+    f = (cp%H0/c)*(cp%Ok/a+1.5d0*cp%Om/a**2)/dsqrt(cp%Om/a**3+cp%Ov)
   else
-    f = (H0/c)**2*((1d0+z)*Ok+1.5d0*(1d0+z)**2*Om-0.5d0*a**2*drho_da_de(a,OL,w0,wa))/H_z(z,hzcp)
+    f = (cp%H0/c)**2*(cp%Ok/a+1.5d0*cp%Om/a**2-0.5d0*a**2*drho_da_de(a,cp))/H_z(z,cp)
   end if
 
 end function dH_dz
 
 
-function zoftau(tau,tau0,hzcp,eps) result(f)
+function zoftau(tau,tau0,cp,eps) result(f)
 ! * Return z from tau (z<10)
 ! * This subroutine utilize the Newton method
 ! * The initial value is given as an approximate formula
@@ -316,7 +369,8 @@ function zoftau(tau,tau0,hzcp,eps) result(f)
 !
   implicit none
 ! [inputs]
-  double precision, intent(in) :: tau, tau0, hzcp(5)
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in) :: tau, tau0
 !
 ! (optional)
   double precision, intent(in), optional :: eps
@@ -327,7 +381,7 @@ function zoftau(tau,tau0,hzcp,eps) result(f)
   double precision, allocatable :: t(:), z(:)
 
   Dt = tau0 - tau
-  dh = c/hzcp(1)
+  dh = c/cp%H0
   n  = 10
   ac = 1d-3
   if (present(eps)) ac = eps
@@ -339,8 +393,8 @@ function zoftau(tau,tau0,hzcp,eps) result(f)
   if (z(1)>1d-2) then
     ! Newton method
     do i = 1, n-1
-      fz = C_z(z(i),hzcp) - Dt
-      pz = 1d0/H_z(z(i),hzcp)
+      fz = C_z(z(i),cp) - Dt
+      pz = 1d0/H_z(z(i),cp)
       z(i+1) = z(i) - fz/pz
       if(z(i+1)<0d0) z(i+1)=0d0
       f  = z(i+1) 
@@ -604,18 +658,16 @@ subroutine wint(k,plin,r,sig,d1,d2)
 end subroutine wint
 
 
-subroutine NonLinRatios(plin,z,k,Ov,Om,w0,wa,fnu,pnl)
+subroutine NonLinRatios(plin,z,k,cp,pnl)
 ! * This implementation uses Halofit (Taken from CAMB)
 !
 ! [inputs]
 !   plin(z,k) --- linear matter power spectrum at each z and k
 !   z(:)      --- redshift
 !   k(:)      --- wavelength
-!   Ov        --- Omega_Lambda at z=0
-!   Om        --- Omega_Matter at z=0
-!   w0, wa    --- Dark Energy EoS w=w0+wa(1-a)
-!   fnu       --- neutrino fraction
-  double precision, intent(in)  :: plin(:,:), z(:), k(:), Ov, Om, w0, wa, fnu
+!   cp        --- cosmological parameters
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in)  :: plin(:,:), z(:), k(:)
 !
 ! [outputs]
   double precision, intent(out) :: pnl(:,:)
@@ -630,8 +682,8 @@ subroutine NonLinRatios(plin,z,k,Ov,Om,w0,wa,fnu,pnl)
     ! calculate nonlinear wavenumber (rknl), effective spectral index (rneff) and
     ! curvature (rncur) of the power spectrum at the desired redshift, using method described in Smith et al (2002).
     a      = 1d0/(1d0+z(zi))
-    Om_m   = omega_m(a, Om, Ov, w0, wa)
-    Om_v   = omega_v(a, Om, Ov, w0, wa)
+    Om_m   = omega_m(a,cp)
+    Om_v   = omega_v(a,cp)
     xlogr1 = -2.0
     xlogr2 = 3.5
     do
@@ -661,8 +713,8 @@ subroutine NonLinRatios(plin,z,k,Ov,Om,w0,wa,fnu,pnl)
       if (k(i) > 0.005d0) then
         ! dimension less linear power spectrum: dlin = k^3 * P(k) * 4*pi*V/(2*pi)^3
         dlin = plin(zi,i)*(k(i)**3/(2*pi**2))
-        w = w0+(1d0-a)*wa
-        call halofit_T12(k(i),rneff,rncur,rknl,dlin,dnl,Om_m,Om_v,Om,w,fnu)
+        w = cp%w0+(1d0-a)*cp%wa
+        call halofit_T12(k(i),rneff,rncur,rknl,dlin,dnl,Om_m,Om_v,cp%Om,w,cp%nu)
         pnl(zi,i) = (dnl/dlin)*plin(zi,i)
       end if
     end do

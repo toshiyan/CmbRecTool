@@ -46,7 +46,7 @@ function nz_SF_scal(z,a,b,z0)  result(f)
   double precision :: f, N
 
   N = b / (z0*dexp(lnGamma((a+1d0)/b)))
-  f = (z/z0)**a*dexp(-(z/z0)**b)
+  f = N*(z/z0)**a*dexp(-(z/z0)**b)
 
 end function nz_SF_scal
 
