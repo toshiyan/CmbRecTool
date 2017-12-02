@@ -319,6 +319,8 @@ function snr_xbisp(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck,btype)  result(f)
         if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
         if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
         if (mod(l1+l2+l3,2)==1) cycle
+        !Del = 3d0
+        !if (l2==l3) Del = 6d0
         Del = 1d0
         if (l2==l3) Del = 2d0
         bisp = 0d0
