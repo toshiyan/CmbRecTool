@@ -43,6 +43,10 @@ module myutils
     module procedure interp_lin_arr, interp_lin_narr
   end interface
 
+  interface ave
+    module procedure ave_1d, ave_2d
+  end interface ave
+
   private dlc, pi, iu
 
 contains
@@ -966,31 +970,6 @@ subroutine meanvar(Cl,mCl,vCl,f)
 end subroutine meanvar
 
 
-subroutine meanvar_save(f,b,C)
-!* save input data to file after average over dim=2
-  implicit none
-  !I/O
-  character(*) , intent(in) :: f
-  double precision, intent(in) :: C(:,:,:), b(:)
-  !intenral
-  integer :: i, id, bn
-  double precision, allocatable :: mC(:,:), vC(:,:), bb(:,:)
-
-  id = size(C,dim=2)
-  bn = size(C,dim=3)
-
-  allocate(mC(id,bn),vC(id,bn))
-  do i = 1, id
-    call meanvar(C(:,i,:),mC(i,:),vC(i,:))
-  end do
-  allocate(bb(1,size(b)))
-  bb(1,:) = b
-  call savetxt(f,bb,mC,vC)
-  deallocate(mC,vC,bb)
-
-end subroutine meanvar_save
-
-
 !//////////////////////////////////////////////////////////////////////////////!
 ! histogram 
 !//////////////////////////////////////////////////////////////////////////////!
@@ -1179,21 +1158,6 @@ function GLdxs(xran,GLw)  result(dx)
   end do
 
 end function GLdxs
-
-
-function Integ(dx,fx)  result(f)
-!Gauss Legendre Quadrature
-  implicit none
-  double precision, intent(in) :: dx(:), fx(:)
-  integer :: i
-  double precision :: f
-
-  f = 0d0
-  do i = 1, size(dx)
-    f = f + dx(i)*fx(i)
-  end do
-
-end function Integ
 
 
 !///////////////////////////////////////////////////////!
@@ -1393,6 +1357,81 @@ function zeros_d(n)  result(f)
 
 end function zeros_d
 
+
+function ave_1d(x)  result(f)
+  implicit none
+  double precision, intent(in) :: x(:)
+  double precision, allocatable :: f
+
+  f = sum(x)/dble(size(x))
+
+end function ave_1d
+
+
+function ave_2d(x,d)  result(f)
+  implicit none
+  integer, intent(in) :: d
+  double precision, intent(in) :: x(:,:)
+  double precision, allocatable :: f(:)
+  integer :: n, s
+
+  if (d==1) n = size(x,dim=2)
+  if (d==2) n = size(x,dim=1)
+
+  s = size(x,dim=d)
+
+  allocate(f(n))
+  f = sum(x,dim=d)/dble(s)
+
+end function ave_2d
+
+
+!//////////////////////////////////////////////////////////////////////////////!
+! Old functions / subroutines
+!//////////////////////////////////////////////////////////////////////////////!
+
+#ifdef all
+
+function Integ(dx,fx)  result(f)
+  implicit none
+  double precision, intent(in) :: dx(:), fx(:)
+  integer :: i
+  double precision :: f
+
+  f = 0d0
+  do i = 1, size(dx)
+    f = f + dx(i)*fx(i)
+  end do
+
+end function Integ
+
+subroutine meanvar_save(f,b,C)
+!* save input data to file after average over dim=2
+  implicit none
+  !I/O
+  character(*) , intent(in) :: f
+  double precision, intent(in) :: C(:,:,:), b(:)
+  !intenral
+  integer :: i, id, bn
+  double precision, allocatable :: mC(:,:), vC(:,:), bb(:,:)
+
+  id = size(C,dim=2)
+  bn = size(C,dim=3)
+
+  allocate(mC(id,bn),vC(id,bn))
+  do i = 1, id
+    call meanvar(C(:,i,:),mC(i,:),vC(i,:))
+  end do
+  allocate(bb(1,size(b)))
+  bb(1,:) = b
+  call savetxt(f,bb,mC,vC)
+  deallocate(mC,vC,bb)
+
+end subroutine meanvar_save
+
+
+
+#endif all
 
 end module myutils
 

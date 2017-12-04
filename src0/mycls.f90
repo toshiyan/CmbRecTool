@@ -15,6 +15,9 @@ module mycls
     module procedure calccl_spc, calccl_dpc
   end interface calccl
 
+  interface alm2bcl
+    module procedure alm2bcl_full, alm2bcl_flat
+  end interface alm2bcl
 
   private dlc, pi, TT, TE, EE, BB, dd, Td, Ed, oo
   private splint, spline, FileColumns, FileLines, savetxt, linspace, interp_lin, check_positive
@@ -488,8 +491,6 @@ subroutine calcbcl_flat(bmax,oL,els,Cl,Cb,Vb,tCl,tVl,f,spc)
   if(present(tCl)) then !transfer to Cls
     Ab  = Ab*cl2cbf(b,tCl)
     vAb = vAb*cl2cbf(b,tCl)
-    !Ab = Ab*cl2cb(b,tCl,el)
-    !vAb = vAb*cl2cb(b,tCl,el)
   end if
 
   if(present(Cb)) Cb = Ab
@@ -548,70 +549,6 @@ subroutine power_binning_flat(bp,els,AL,BL,bA,bV)
 end subroutine power_binning_flat
 
 
-subroutine power_binning_full(bp,eL,Al,vAl,bA,bV)
-  implicit none 
-  !I/O
-  integer, intent(in) :: eL(2)
-  double precision, intent(in) :: bp(:), Al(:), vAl(:)
-  double precision, intent(out) :: bA(:), bV(:)
-  !internal 
-  integer :: b, i, bmax
-  double precision, allocatable :: bW(:)
-
-  bmax = size(bp) - 1
-
-  allocate(bW(bmax))
-  !* compute optimal variance of b-th bin, bW(b)
-  bW = 0d0; bA = 0d0; bV = 0d0
-  do b = 1, bmax
-    do i = el(1), el(2)
-      if(i<bp(b).or.i>=bp(b+1)) cycle
-      bW(b) = bW(b) + vAl(i)
-      bA(b) = bA(b) + vAl(i)*Al(i)
-    end do
-    if(bW(b)<=0d0) cycle
-    bW(b) = 1d0/bW(b)
-    bA(b) = bA(b)*BW(b)
-    bV(b) = dsqrt(bW(b))
-  end do
-
-end subroutine power_binning_full
-
-
-subroutine power_labeling(el,els,nmax,label)
-!* find independent els in 2D grid
-  implicit none 
-  !I/O
-  integer, intent(in) :: el(2)
-  double precision, intent(in) :: els(:)
-  integer, intent(out) :: nmax, label(:)
-  !internal
-  integer :: npix, m, n, indep
-
-  npix = size(els)
-  nmax = 0
-
-  do n = 1, npix
-    indep=-1
-    label(n) = 0
-    if(els(n)<el(1).or.els(n)>=el(2)) cycle
-    do m = 1, n-1
-      if(els(n)==els(m)) then
-        indep = m
-        go to 20
-      end if
-    end do
-20  if(indep==-1) then 
-      nmax = nmax + 1
-      label(n) = nmax 
-    else 
-      label(n) = label(indep)
-    end if
-  end do
-
-end subroutine power_labeling
-
-
 subroutine cl_elcut(nn,D,Cl) 
 !* assign zeros to Cls outsize of the largest annuli
   implicit none
@@ -638,49 +575,68 @@ subroutine cl_elcut(nn,D,Cl)
 end subroutine cl_elcut
 
 
-subroutine calccl_spc(alm1,alm2,eL,Cl,f,norm)
+!//////////////////////////////////////////////////////////////////////////////!
+! From alm to angular power spectrum (fullsky)
+!//////////////////////////////////////////////////////////////////////////////!
+
+
+subroutine calccl_spc(cl,iL,alm1,alm2,f,norm)
   implicit none
   !I/O
-  character(*), intent(in), optional :: f
-  integer, intent(in) :: eL(2)
-  double precision, intent(in), optional :: norm
-  double precision, intent(out), optional :: Cl(:)
-  complex, intent(in), dimension(0:eL(2),0:eL(2)) :: alm1, alm2
-  !intenral
-  integer :: l
-  double precision :: tCl(eL(2))
-
-  tCl = 0d0
-  do l = eL(1), eL(2)
-    tCl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
-  end do
-  if (present(norm))  tcl = tcl*norm
-  if (present(f))     call savetxt(f,linspace(1,eL(2)),tCl)
-  if (present(Cl))    Cl = tCl
-
-end subroutine calccl_spc
-
-
-subroutine calccl_dpc(alm1,alm2,iL,Cl,oL,f,norm)
-  implicit none
-  !I/O
+  double precision, intent(out) :: Cl(:)
   integer, intent(in) :: iL(2)
-  double precision, intent(out) :: cl(:)
-  complex(dlc), intent(in), dimension(0:iL(2),0:iL(2)) :: alm1, alm2
-  !optional
+  complex, intent(in), dimension(0:iL(2),0:iL(2)) :: alm1
+  !(optional)
+  complex, intent(in), dimension(0:iL(2),0:iL(2)), optional :: alm2
   character(*), intent(in), optional :: f
-  integer, intent(in), optional :: oL(2)
   double precision, intent(in), optional :: norm
   !intenral
   integer :: l, eL(2)
 
   eL = [1,size(cl)]
-  if (present(oL))  eL=oL
-  if (eL(1)<1)  stop 'error (calccl_dpc): lmin < 1'
+  if (eL(2)>iL(2))  stop 'error (calccl_spc): not enough multipoles of input alm'
 
-  do l = eL(1), eL(2)
-    cl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
-  end do
+  Cl = 0d0
+  if (present(alm2)) then
+    do l = eL(1), eL(2)
+      Cl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
+    end do
+  else
+    do l = eL(1), eL(2)
+      Cl(l) = ( dble(alm1(l,0)*alm1(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm1(l,1:l))))/(2.*l+1.)
+    end do
+  end if
+  if (present(norm))  cl = cl*norm
+  if (present(f))     call savetxt(f,linspace(1,eL(2)),cl)
+
+end subroutine calccl_spc
+
+
+subroutine calccl_dpc(cl,iL,alm1,alm2,f,norm)
+  implicit none
+  !I/O
+  integer, intent(in) :: iL(2)
+  complex(dlc), intent(in), dimension(0:iL(2),0:iL(2)) :: alm1
+  double precision, intent(out) :: cl(:)
+  !optional
+  complex(dlc), intent(in), dimension(0:iL(2),0:iL(2)), optional :: alm2
+  character(*), intent(in), optional :: f
+  double precision, intent(in), optional :: norm
+  !intenral
+  integer :: l, eL(2)
+
+  eL = [1,size(cl)]
+  if (eL(2)>iL(2))  stop 'error (calccl_dpc): not enough multipoles of input alm'
+
+  if (present(alm2)) then
+    do l = eL(1), eL(2)
+      cl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
+    end do
+  else
+    do l = eL(1), eL(2)
+      cl(l) = ( dble(alm1(l,0)*alm1(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm1(l,1:l))))/(2.*l+1.)
+    end do
+  end if
 
   if (present(norm))  cl = cl*norm
   if (present(f))     call savetxt(f,linspace(1,eL(2)),cl)
@@ -688,32 +644,67 @@ subroutine calccl_dpc(alm1,alm2,iL,Cl,oL,f,norm)
 end subroutine calccl_dpc
 
 
-subroutine angle_average(nn,alm,Al,nmax,label,el)
+subroutine alm2bcl_full(bmax,iL,alm1,alm2,bc,Cb,oL)
   implicit none
-  !subroutine for computing power spectrum from Fourier grids
-  !I/O
-  integer, intent(in) :: nn(2), nmax, label(:)
-  double precision, intent(in) :: el(:)
-  double precision, intent(out) :: Al(:)
-  complex(dlc), intent(in) :: alm(:)
+  integer, intent(in) :: bmax, iL(2)
+  complex(dlc), intent(in), dimension(0:iL(2),0:iL(2)) :: alm1
+!(optional)
+  integer, intent(in), optional :: oL(2)
+  complex(dlc), intent(in), dimension(0:iL(2),0:iL(2)), optional :: alm2
+  double precision, intent(out), optional :: bc(:), Cb(:)
   !internal
-  integer :: i, m, n
-  double precision :: num(nmax)
+  integer :: npix, eL(2)
+  double precision, allocatable :: Cl(:), bp(:), bc0(:)
 
-  !generate [ l(i), Al(i), Cl(i) ] table 
-  num = 0
-  Al = 0.d0
-  do i = 1, nmax 
-    do n = 1, nn(1)*nn(2)
-      if(label(n)==i) then
-        num(i) = num(i) + 1
-        Al(i) = Al(i) + alm(n) 
-      end if
-      Al(i) = Al(i)/dble(num(i))
+  eL = iL
+  if (present(oL)) eL=oL
+
+  allocate(Cl(eL(2)))
+  if (present(alm2)) then
+    call calccl_dpc(cl,iL,alm1,alm2)
+  else
+    call calccl_dpc(cl,iL,alm1)
+  end if
+
+  allocate(bp(bmax+1),bc0(bmax))
+  call binned_ells(eL,bp,bc0)
+  call power_binning_full(bp,eL,Cl,Cb)
+  if (present(bc)) bc = bc0
+  deallocate(bp,bc0,Cl)
+
+end subroutine alm2bcl_full
+
+
+subroutine power_binning_full(bp,eL,Cl,bC,Vl)
+  implicit none 
+  !I/O
+  integer, intent(in) :: eL(2)
+  double precision, intent(in) :: bp(:), Cl(:)
+  double precision, intent(in), optional :: Vl(:)
+  double precision, intent(out) :: bC(:)
+  !internal 
+  integer :: b, i, bmax
+  double precision, allocatable :: bW(:), Wl(:)
+
+  bmax = size(bp) - 1
+
+  allocate(bW(bmax),Wl(size(Cl))); bW=0d0; Wl=1d0
+  !* compute optimal variance of b-th bin, bW(b)
+  if (present(Vl))  Wl = Vl
+  bC = 0d0
+  do b = 1, bmax
+    do i = el(1), el(2)
+      if (i<bp(b).or.i>=bp(b+1)) cycle
+      bW(b) = bW(b) + Wl(i)
+      bC(b) = bC(b) + Wl(i)*Cl(i)
     end do
+    if (bW(b)<=0d0) cycle
+    bW(b) = 1d0/bW(b)
+    bC(b) = bC(b)*bW(b)
   end do
+  deallocate(bW,Wl)
 
-end subroutine angle_average
+end subroutine power_binning_full
 
 
 subroutine readcl_camb(Cl,f,eL,HasBB,rowCl)
@@ -789,6 +780,76 @@ subroutine map_vars(sigma,eL,cl)
 
 end subroutine map_vars
 
+
+!//////////////////////////////////////////////////////////////////////////////!
+! Old functions / subroutines
+!//////////////////////////////////////////////////////////////////////////////!
+
+#ifdef all 
+
+subroutine angle_average(nn,alm,Al,nmax,label,el)
+  implicit none
+  !subroutine for computing power spectrum from Fourier grids
+  !I/O
+  integer, intent(in) :: nn(2), nmax, label(:)
+  double precision, intent(in) :: el(:)
+  double precision, intent(out) :: Al(:)
+  complex(dlc), intent(in) :: alm(:)
+  !internal
+  integer :: i, m, n
+  double precision :: num(nmax)
+
+  !generate [ l(i), Al(i), Cl(i) ] table 
+  num = 0
+  Al = 0.d0
+  do i = 1, nmax 
+    do n = 1, nn(1)*nn(2)
+      if(label(n)==i) then
+        num(i) = num(i) + 1
+        Al(i) = Al(i) + alm(n) 
+      end if
+      Al(i) = Al(i)/dble(num(i))
+    end do
+  end do
+
+end subroutine angle_average
+
+subroutine power_labeling(el,els,nmax,label)
+!* find independent els in 2D grid
+  implicit none 
+  !I/O
+  integer, intent(in) :: el(2)
+  double precision, intent(in) :: els(:)
+  integer, intent(out) :: nmax, label(:)
+  !internal
+  integer :: npix, m, n, indep
+
+  npix = size(els)
+  nmax = 0
+
+  do n = 1, npix
+    indep=-1
+    label(n) = 0
+    if(els(n)<el(1).or.els(n)>=el(2)) cycle
+    do m = 1, n-1
+      if(els(n)==els(m)) then
+        indep = m
+        go to 20
+      end if
+    end do
+20  if(indep==-1) then 
+      nmax = nmax + 1
+      label(n) = nmax 
+    else 
+      label(n) = label(indep)
+    end if
+  end do
+
+end subroutine power_labeling
+
+
+
+#endif all
 
 end module mycls
 
