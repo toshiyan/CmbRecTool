@@ -4,12 +4,12 @@
 
 module cmblbisp
   use myconst, only: pi
-  use myutils, only: neighb, spline
+  use myutils, only: neighb, spline, savetxt
   use myfunc,  only: C_z, H_z, D_z, NonLinRatios, pk2sigma, cosmoparams
   implicit none
 
   private pi
-  private neighb, spline
+  private neighb, spline, savetxt
   private C_z, H_z, D_z, NonLinRatios, pk2sigma, cosmoparams
 
 contains
@@ -59,6 +59,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
 
   wlf  = 1.5d0*cp%Om*(cp%H0/3d5)**2*(1d0+z) !matter -> potential conversion factor (matter dominant)
 
+  if (2d0/chi(zn)<ki(1)) write(*,*) 'warning: required minimum k is smaller than input', 2d0/chi(zn), ki(1)
   ! choose kernel for z integral
   bisptype = 'kkk'
   if (present(btype)) bisptype = btype
@@ -77,6 +78,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   do i = 1, zn
     pklini(i,:) = D(i)**2*pklin0  !linear P(k,z) (i=1 -> z=0)
   end do
+  !call savetxt('pk_z1.dat',ki/cp%h,pklini(11,:)*cp%h**3,ow=.true.)
   if (model=='')  pki = pklini  !use linear 
   if (model/='')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
 
