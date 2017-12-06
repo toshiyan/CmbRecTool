@@ -67,7 +67,8 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   case ('kkk')
     zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**3 * 2d0/chi**4 
   case ('gkk')
-    zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
+    !zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
+    zker = (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
   case ('ggk')
     zker = dz/Hz * (wlf*(chis-chi)*chi/chis) * 2d0/chi**4 * Hz**2
   case default
@@ -78,9 +79,12 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   do i = 1, zn
     pklini(i,:) = D(i)**2*pklin0  !linear P(k,z) (i=1 -> z=0)
   end do
-  !call savetxt('pk_z1.dat',ki/cp%h,pklini(11,:)*cp%h**3,ow=.true.)
+  !call savetxt('pklin_z1.dat',ki/cp%h,pklini(11,:)*cp%h**3,ow=.true.)
   if (model=='')  pki = pklini  !use linear 
   if (model/='')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
+  !call savetxt('pk_z0.dat',ki/cp%h,pki(1,:)*cp%h**3,ow=.true.)
+  !call savetxt('pk_z1.dat',ki/cp%h,pki(2,:)*cp%h**3,ow=.true.)
+  !call savetxt('pk_z10.dat',ki/cp%h,pki(11,:)*cp%h**3,ow=.true.)
 
   !* sigma_8
   s0 = dsqrt(pk2sigma(8d0/(cp%H0/100d0),ki,pki(1,:)))
@@ -182,7 +186,7 @@ subroutine F2_Kernel(k,p1,p2,F2K)
 end subroutine F2_Kernel
 
 
-subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype)
+subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,blll)
 ! equilateral LSS bispectrum
   implicit none
   !I/O
@@ -190,6 +194,7 @@ subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype)
   integer, intent(in) :: eL(2)
   double precision, intent(in) :: k(:,:), Pk(:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
   double precision, intent(out) :: bl(:)
+  double precision, intent(out), optional :: blll(:,:)
   !internal
   character(8) :: b=''
   integer :: l, i, zn
@@ -200,11 +205,18 @@ subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype)
 
   do l = eL(1), eL(2)
     bisp = 0d0
-    if (mod(3*l,2)==1) cycle
+    !if (mod(3*l,2)==1) cycle
     if (b/='LSS')  bisp = 3d0*dble(l)**4*sum(wp(:,l)*ck(:,l))
     do i = 1, zn
       call F2_Kernel([k(i,l),k(i,l),k(i,l)],abc(:,i,l),abc(:,i,l),F2)
-      if (b/='pb')  bisp = bisp + fac(i) * 3d0 * F2*Pk(i,l)*Pk(i,l) 
+      if (b/='pb')  bisp = bisp + fac(i) * 3d0 * F2*Pk(i,l)*Pk(i,l)
+      if (present(blll)) then
+        if (l==6)  blll(1,i) = 3d0*F2*Pk(i,l)*Pk(i,l)
+        if (l==9)  blll(2,i) = 3d0*F2*Pk(i,l)*Pk(i,l)
+        if (l==13) blll(3,i) = 3d0*F2*Pk(i,l)*Pk(i,l)
+        if (l==20) blll(4,i) = 3d0*F2*Pk(i,l)*Pk(i,l)
+        if (l==20) blll(5,i) = fac(i)
+      end if
     end do
     if (present(ltype).and.ltype=='full') bisp = bisp * W3j_approx(dble(l),dble(l),dble(l)) * dsqrt((2d0*l+1d0)**3/(4d0*pi))
     bl(l) = bisp
