@@ -204,22 +204,29 @@ subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,blll)
   if (present(btype)) b=btype
 
   do l = eL(1), eL(2)
+
     bisp = 0d0
+
     !if (mod(3*l,2)==1) cycle
     if (b/='LSS')  bisp = 3d0*dble(l)**4*sum(wp(:,l)*ck(:,l))
+
     do i = 1, zn
       call F2_Kernel([k(i,l),k(i,l),k(i,l)],abc(:,i,l),abc(:,i,l),F2)
       if (b/='pb')  bisp = bisp + fac(i) * 3d0 * F2*Pk(i,l)*Pk(i,l)
-      if (present(blll)) then
+
+      if (present(blll)) then !extract b_{lll} at specific l as a function of z
         if (l==6)  blll(1,i) = 3d0*F2*Pk(i,l)*Pk(i,l)
         if (l==9)  blll(2,i) = 3d0*F2*Pk(i,l)*Pk(i,l)
         if (l==13) blll(3,i) = 3d0*F2*Pk(i,l)*Pk(i,l)
         if (l==20) blll(4,i) = 3d0*F2*Pk(i,l)*Pk(i,l)
         if (l==20) blll(5,i) = fac(i)
       end if
+
     end do
+
     if (present(ltype).and.ltype=='full') bisp = bisp * W3j_approx(dble(l),dble(l),dble(l)) * dsqrt((2d0*l+1d0)**3/(4d0*pi))
     bl(l) = bisp
+
   end do
 
 end subroutine bisp_equi
