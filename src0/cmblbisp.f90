@@ -67,8 +67,8 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   case ('kkk')
     zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**3 * 2d0/chi**4 
   case ('gkk')
-    !zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
-    zker = (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
+    zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
+    !zker = (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
   case ('ggk')
     zker = dz/Hz * (wlf*(chis-chi)*chi/chis) * 2d0/chi**4 * Hz**2
   case default
@@ -132,28 +132,6 @@ subroutine Limber_k2l(chi,k,Pk,kl,Pl)
   end do
 
 end subroutine Limber_k2l
-
-
-subroutine get_neff(k,kl,plin,n)
-! compute neff(k) at k=l/chi
-  implicit none
-  double precision, intent(in) :: k(:), kl(:,:), plin(:,:)
-  double precision, intent(out) :: n(:,:)
-  integer :: i, l, id, zn, ln
-
-  zn = size(kl,dim=1)
-  ln = size(kl,dim=2)
-
-  do i = 1, zn
-    do l = 2, ln
-      ! find nearest index
-      id     = neighb(kl(i,l),k)
-      ! linear interpolation
-      n(i,l) = (plin(i,id+1)-plin(i,id-1))/plin(i,id) * k(id)/(k(id+1)-k(id-1))
-     end do
-  end do
- 
-end subroutine get_neff
 
 
 function W3j_approx(l1,l2,l3) result(f)
@@ -412,29 +390,6 @@ function snr_bisp(eL,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
 end function snr_bisp
 
 
-subroutine get_knl(k,Pk,knl)
-!* get k_NL
-  implicit none
-  double precision, intent(in) :: k(:), Pk(:,:)
-  double precision, intent(out) :: knl(:)
-  integer :: kn, zn, i, j
-
-  kn = size(k)
-  zn = size(Pk,dim=1)
-
-  do i = 1, zn
-    do j = 1, kn
-      if ( Pk(i,j)*k(j)**3/(4d0*pi) > 1d0 ) then
-        knl(i) = k(j)
-        goto 11
-      end if
-    end do
-11  continue
-  end do
-
-end subroutine get_knl
-
-
 subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
 ! precomputing F2-kernel fitting coefficitents
   implicit none
@@ -448,15 +403,15 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
   double precision, allocatable :: knl(:), n(:,:)
 
   !select a model
-  if (model=="SC01") a = [0.25d0,3.5d0,2d0,1d0,2d0,-0.2d0,1d0,0d0,0d0]
-  if (model=="GM12") a = [0.484d0,3.74d0,-0.849d0,0.392d0,1.013d0,-0.575d0,0.128d0,-0.722d0,-0.926d0]
+  if (model=='SC01')  a = [0.25d0,3.5d0,2d0,1d0,2d0,-0.2d0,1d0,0d0,0d0]
+  if (model=='GM12')  a = [0.484d0,3.74d0,-0.849d0,0.392d0,1.013d0,-0.575d0,0.128d0,-0.722d0,-0.926d0]
 
   zn = size(kl,dim=1)
   ln = size(kl,dim=2)
 
   !precompute knl and n_eff
   allocate(knl(zn),n(zn,ln)); knl=1d0; n=0d0
-  call get_knl(ki,pli,knl)
+  call get_knl(ki,pli,knl,model)
   call get_neff(ki,kl,pli,n)
 
   !compute a, b and c
@@ -477,6 +432,55 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
   deallocate(knl,n)
 
 end subroutine precompute_coeff_abc
+
+
+subroutine get_knl(k,PkL,knl,model)
+!* get k_NL
+  implicit none
+  character(*), intent(in) :: model
+  double precision, intent(in) :: k(:), PkL(:,:)
+  double precision, intent(out) :: knl(:)
+  integer :: kn, zn, i, j
+  double precision :: f
+
+  kn = size(k)
+  zn = size(PkL,dim=1)
+  if (model=='SC03')  f=1d0/(4d0*pi)
+  if (model=='GM12')  f=1d0/(2d0*pi**2)
+
+  do i = 1, zn
+    do j = 1, kn
+      if ( PkL(i,j)*k(j)**3*f > 1d0 ) then
+        knl(i) = k(j)
+        goto 11
+      end if
+    end do
+11  continue
+  end do
+
+end subroutine get_knl
+
+
+subroutine get_neff(k,kl,plin,n)
+! compute neff(k) at k=l/chi
+  implicit none
+  double precision, intent(in) :: k(:), kl(:,:), plin(:,:)
+  double precision, intent(out) :: n(:,:)
+  integer :: i, l, id, zn, ln
+
+  zn = size(kl,dim=1)
+  ln = size(kl,dim=2)
+
+  do i = 1, zn
+    do l = 2, ln
+      ! find nearest index
+      id     = neighb(kl(i,l),k)
+      ! linear interpolation
+      n(i,l) = (plin(i,id+1)-plin(i,id-1))/plin(i,id) * k(id)/(k(id+1)-k(id-1))
+     end do
+  end do
+ 
+end subroutine get_neff
 
 
 subroutine precompute_postborn(dchi,chi,chis,wlf,kl,pl,wp,ck)
