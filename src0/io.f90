@@ -9,7 +9,7 @@ module io
   complex(dlc), parameter :: iu = (0d0,1d0)
 
   interface loadfile
-    module procedure loadfile_1d_d, loadfile_1d_c, loadfile_2d_d, loadfile_2d_c, loadfile_3d_d, loadfile_3d_c
+    module procedure loadfile_1d_d, loadfile_1d_c, loadfile_2d_d, loadfile_2d_c, loadfile_3d_d, loadfile_3d_c, loadfile_4d_c
   end interface loadfile
 
   interface loadfile_py
@@ -17,7 +17,7 @@ module io
   end interface loadfile_py
 
   interface savefile
-    module procedure savefile_1d_d, savefile_1d_c, savefile_2d_d, savefile_2d_c, savefile_3d_d, savefile_3d_c
+    module procedure savefile_1d_d, savefile_1d_c, savefile_2d_d, savefile_2d_c, savefile_3d_d, savefile_3d_c, savefile_4d_c
   end interface savefile
 
   private dlc, pi, iu
@@ -305,6 +305,41 @@ subroutine loadfile_3d_c(f,d1,d2,d3,d4,d5,d6,d7,ns,a)
 end subroutine loadfile_3d_c
 
 
+subroutine loadfile_4d_c(f,d1,d2,d3,d4,d5,ns,a)
+  implicit none
+  !I/O
+  character(*), intent(in) :: f
+  complex(dlc), intent(out) :: d1(:,:,:,:)
+  complex(dlc), intent(out), dimension(:,:,:,:), optional :: d2,d3,d4,d5
+  !optional
+  character(*), intent(in), optional :: a
+  logical, intent(in), optional :: ns
+  !internal
+  character(16) :: ac
+  integer :: i, frm(1:3)
+
+  ac = 'stream'
+  if (present(a)) ac=a
+
+  !* read data from file
+  open(unit=20,file=trim(f),status='old',form='unformatted',access=ac)
+
+  if (.not.present(ns).or.ns==.false.) then
+    read(20) frm(1), frm(2), frm(3), frm(4) !get size
+    call check_inputdata_size(frm,shape(d1),'loadfile_4d_c')
+  end if
+
+  read(20) d1
+  if (present(d2)) read(20) d2
+  if (present(d3)) read(20) d3
+  if (present(d4)) read(20) d4
+  if (present(d5)) read(20) d5
+
+  close(20)
+
+end subroutine loadfile_4d_c
+
+
 subroutine check_inputdata_size(frm,dsize,text)
   implicit none
   character(*), intent(in) :: text
@@ -513,6 +548,38 @@ subroutine savefile_3d_c(f,d1,d2,d3,d4,d5,ow,ns,a)
   close(20)
 
 end subroutine savefile_3d_c
+
+
+subroutine savefile_4d_c(f,d1,d2,d3,d4,d5,ow,ns,a)
+  implicit none
+  !I/O
+  logical, intent(in), optional :: ow, ns
+  character(*), intent(in) :: f
+  complex(dlc), dimension(:,:,:,:), intent(in) :: d1
+  complex(dlc), dimension(:,:,:,:), intent(in), optional :: d2, d3, d4, d5
+  character(*), intent(in), optional :: a
+  !internal
+  character(16) :: ac, st
+
+  !access
+  ac = 'stream'
+  if (present(a)) ac=a
+
+  ! ow
+  st = 'new'
+  if (present(ow).and.ow==.true.) st = 'replace'
+
+  ! output
+  open(unit=20,file=trim(f),status=st,form='unformatted',access=ac)
+  if (.not.present(ns).or.ns==.false.)  write(20) size(d1,dim=1), size(d1,dim=2), size(d1,dim=3), size(d1,dim=4)
+  write(20) d1
+  if (present(d2)) write(20) d2
+  if (present(d3)) write(20) d3
+  if (present(d4)) write(20) d4
+  if (present(d5)) write(20) d5
+  close(20)
+
+end subroutine savefile_4d_c
 
 
 end module io
