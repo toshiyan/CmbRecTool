@@ -150,21 +150,25 @@ function W3j_approx(l1,l2,l3) result(f)
 end function W3j_approx
 
 
-subroutine F2_Kernel(k,p1,p2,F2K)
+subroutine F2_Kernel(k,p1,p2,F2K,lambda)
 ! F2 kernel
   implicit none
   double precision, intent(in) :: k(3), p1(3), p2(3)
   double precision, intent(out) :: F2K
+  double precision, intent(in), optional :: lambda
   !internal
-  double precision :: cost
+  double precision :: cost, lam
+
+  lam = 1d0
+  if (present(lambda))  lam=lambda
 
   cost = (k(3)**2-k(1)**2-k(2)**2)/(2d0*k(1)*k(2)) !cos(theta) of vectors k1 and k2
-  F2K = 5d0/7d0 * p1(1)*p2(1) + 0.5d0*(k(1)**2+k(2)**2)/(k(1)*k(2))*cost*p1(2)*p2(2) + 2d0/7d0*cost**2*p1(3)*p2(3)
+  F2K = (1d0-lam*2d0/7d0)*p1(1)*p2(1) + 0.5d0*(k(1)**2+k(2)**2)/(k(1)*k(2))*cost*p1(2)*p2(2) + lam*2d0/7d0*cost**2*p1(3)*p2(3)
 
 end subroutine F2_Kernel
 
 
-subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,blll)
+subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,blll,lambda)
 ! equilateral LSS bispectrum
   implicit none
   !I/O
@@ -173,13 +177,18 @@ subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,blll)
   double precision, intent(in) :: k(:,:), Pk(:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
   double precision, intent(out) :: bl(:)
   double precision, intent(out), optional :: blll(:,:)
+  double precision, intent(in), optional :: lambda(:)
   !internal
   character(8) :: b=''
   integer :: l, i, zn
   double precision :: bisp, F2
+  double precision, allocatable :: lam(:)
 
   zn = size(k,dim=1)
   if (present(btype)) b=btype
+
+  allocate(lam(zn)); lam = 1d0
+  if (present(lambda))  lam = lambda
 
   do l = eL(1), eL(2)
 
@@ -189,7 +198,7 @@ subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,blll)
     if (b/='LSS')  bisp = 3d0*dble(l)**4*sum(wp(:,l)*ck(:,l))
 
     do i = 1, zn
-      call F2_Kernel([k(i,l),k(i,l),k(i,l)],abc(:,i,l),abc(:,i,l),F2)
+      call F2_Kernel([k(i,l),k(i,l),k(i,l)],abc(:,i,l),abc(:,i,l),F2,lam(i))
       if (b/='pb')  bisp = bisp + fac(i) * 3d0 * F2*Pk(i,l)*Pk(i,l)
 
       if (present(blll)) then !extract b_{lll} at specific l as a function of z
@@ -207,10 +216,12 @@ subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,blll)
 
   end do
 
+  deallocate(lam)
+
 end subroutine bisp_equi
 
 
-subroutine bisp_fold(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype)
+subroutine bisp_fold(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,lambda)
 ! equilateral LSS bispectrum
   implicit none
   !I/O
@@ -218,31 +229,39 @@ subroutine bisp_fold(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype)
   integer, intent(in) :: eL(2)
   double precision, intent(in) :: k(:,:), Pk(:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
   double precision, intent(out) :: bl(:)
+  double precision, intent(in), optional :: lambda(:)
   !internal
   character(8) :: b=''
   integer :: l, i, zn
   double precision :: bisp, F2(3)
+  double precision, allocatable :: lam(:)
 
   zn = size(k,dim=1)
   if (present(btype)) b=btype
+
+  allocate(lam(zn)); lam = 1d0
+  if (present(lambda))  lam = lambda
+  write(*,*) lam
 
   do l = eL(1), eL(2)
     bisp = 0d0
     if (b/='LSS')  bisp = - 8d0*dble(l)**4*sum(wp(:,l)*ck(:,l)) - 4d0*(dble(l)**4*sum(wp(:,l)*ck(:,2*l))-dble(2*l)**4*sum(wp(:,2*l)*ck(:,l)))
     do i = 1, zn
-      call F2_Kernel([k(i,l),k(i,l),k(i,2*l)],abc(:,i,l),abc(:,i,l),F2(1))
-      call F2_Kernel([k(i,l),k(i,2*l),k(i,l)],abc(:,i,l),abc(:,i,2*l),F2(2))
-      call F2_Kernel([k(i,2*l),k(i,l),k(i,l)],abc(:,i,2*l),abc(:,i,l),F2(3))
+      call F2_Kernel([k(i,l),k(i,l),k(i,2*l)],abc(:,i,l),abc(:,i,l),F2(1),lam(i))
+      call F2_Kernel([k(i,l),k(i,2*l),k(i,l)],abc(:,i,l),abc(:,i,2*l),F2(2),lam(i))
+      call F2_Kernel([k(i,2*l),k(i,l),k(i,l)],abc(:,i,2*l),abc(:,i,l),F2(3),lam(i))
       if (b/='pb')  bisp = bisp + fac(i) * (F2(1)*Pk(i,l)*Pk(i,l) + F2(2)*Pk(i,l)*Pk(i,2*l) + F2(3)*Pk(i,2*l)*Pk(i,l))
     end do
     if (present(ltype).and.ltype=='full') bisp = bisp * W3j_approx(dble(l),dble(l),dble(2*l)) * dsqrt((2d0*l+1d0)**2*(4d0*l+1)/(4d0*pi))
     bl(2*l) = bisp
   end do
 
+  deallocate(lam)
+
 end subroutine bisp_fold
 
 
-subroutine bisp_sque(eL,k,Pk,fac,abc,wp,ck,l0,bl,btype,ltype)
+subroutine bisp_sque(eL,k,Pk,fac,abc,wp,ck,l0,bl,btype,ltype,lambda)
 ! squeezed LSS bispectrum
   implicit none
   !I/O
@@ -250,26 +269,33 @@ subroutine bisp_sque(eL,k,Pk,fac,abc,wp,ck,l0,bl,btype,ltype)
   integer, intent(in) :: eL(2), l0
   double precision, intent(in) :: k(:,:), Pk(:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
   double precision, intent(out) :: bl(:)
+  double precision, intent(in), optional :: lambda(:)
   !internal
   character(8) :: b=''
   integer :: l, i, zn
   double precision :: bisp, F2(3)
+  double precision, allocatable :: lam(:)
 
   zn = size(k,dim=1)
   if (present(btype)) b=btype
+
+  allocate(lam(zn)); lam = 1d0
+  if (present(lambda))  lam = lambda
 
   do l = max(l0,eL(1)), eL(2)
     bisp = 0d0
     if (b/='LSS') call bisp_postborn(l0,l,l,wp,ck,bisp)
     do i = 1, zn
-      call F2_Kernel([k(i,l),k(i,l),k(i,l0)],abc(:,i,l),abc(:,i,l),F2(1))
-      call F2_Kernel([k(i,l),k(i,l0),k(i,l)],abc(:,i,l),abc(:,i,l0),F2(2))
-      call F2_Kernel([k(i,l0),k(i,l),k(i,l)],abc(:,i,l0),abc(:,i,l),F2(3))
+      call F2_Kernel([k(i,l),k(i,l),k(i,l0)],abc(:,i,l),abc(:,i,l),F2(1),lam(i))
+      call F2_Kernel([k(i,l),k(i,l0),k(i,l)],abc(:,i,l),abc(:,i,l0),F2(2),lam(i))
+      call F2_Kernel([k(i,l0),k(i,l),k(i,l)],abc(:,i,l0),abc(:,i,l),F2(3),lam(i))
       if (b/='pb')  bisp = bisp + fac(i) * (F2(1)*Pk(i,l)*Pk(i,l) + F2(2)*Pk(i,l)*Pk(i,l0) + F2(3)*Pk(i,l0)*Pk(i,l))
     end do
     if (present(ltype).and.ltype=='full') bisp = bisp * W3j_approx(dble(l),dble(l),dble(l0)) * dsqrt((2d0*l+1d0)**2*(2d0*l0+1)/(4d0*pi))
     bl(l) = bisp
   end do
+
+  deallocate(lam)
 
 end subroutine bisp_sque
 
