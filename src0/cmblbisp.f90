@@ -15,14 +15,13 @@ module cmblbisp
 contains
 
 
-subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype)
+subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype,pkout)
 ! compute k and Pk at k=l/chi, factor (fac) for LSS bispectrum, F2-kernel coefficients (abc), 
 ! weighted potential spectrum (wp), and kappa spectrum at [chi,chi_s] (ck)
   implicit none
 
   ![input]
   ! model  --- nonlinear matter bispectrum fitting model ('' for linear)
-  ! btype  --- type of bispectrum (kkk,gkk,ggk)
   ! z, dz  --- redshift points and thier interval
   ! zs     --- source z
   ! cp     --- cosmological parameters
@@ -30,8 +29,13 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   ! pklin0 --- CAMB output P(k,z=0)
   type(cosmoparams), intent(in) :: cp
   character(*), intent(in) :: model
-  character(*), intent(in), optional :: btype
   double precision, intent(in)  :: z(:), dz(:), zs, ki(:), pklin0(:)
+
+  !(optional)
+  ! btype  --- type of bispectrum (kkk,gkk,ggk)
+  ! pkout  --- output Pk data
+  character(*), intent(in), optional :: btype
+  integer, optional :: pkout
 
   ![output]
   ! kl, pl --- k and Pk at k=l/chi
@@ -79,12 +83,14 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   do i = 1, zn
     pklini(i,:) = D(i)**2*pklin0  !linear P(k,z) (i=1 -> z=0)
   end do
-  !call savetxt('pklin_z1.dat',ki/cp%h,pklini(11,:)*cp%h**3,ow=.true.)
+
   if (model=='')  pki = pklini  !use linear 
   if (model/='')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
-  !call savetxt('pk_z0.dat',ki/cp%h,pki(1,:)*cp%h**3,ow=.true.)
-  !call savetxt('pk_z1.dat',ki/cp%h,pki(2,:)*cp%h**3,ow=.true.)
-  !call savetxt('pk_z10.dat',ki/cp%h,pki(11,:)*cp%h**3,ow=.true.)
+
+  if (present(pkout)) then
+    call savetxt('pklin.dat',ki/cp%h,pklini(pkout,:)*cp%h**3,ow=.true.)
+    call savetxt('pk.dat',ki/cp%h,pki(pkout,:)*cp%h**3,ow=.true.)
+  end if
 
   !* sigma_8
   s0 = dsqrt(pk2sigma(8d0/(cp%H0/100d0),ki,pki(1,:)))
@@ -241,7 +247,6 @@ subroutine bisp_fold(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,lambda)
 
   allocate(lam(zn)); lam = 1d0
   if (present(lambda))  lam = lambda
-  write(*,*) lam
 
   do l = eL(1), eL(2)
     bisp = 0d0
