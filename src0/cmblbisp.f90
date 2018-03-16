@@ -170,8 +170,8 @@ subroutine F2_Kernel(k,p1,p2,F2K,lambda,kappa)
   if (present(kappa))  kap=kappa
 
   cost = (k(3)**2-k(1)**2-k(2)**2)/(2d0*k(1)*k(2)) !cos(theta) of vectors k1 and k2
-  !F2K = (kap-lam*2d0/7d0)*p1(1)*p2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*cost*p1(2)*p2(2) + lam*2d0/7d0*cost**2*p1(3)*p2(3)
-  F2K = (kap-lam)*p1(1)*p2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*cost*p1(2)*p2(2) + lam*2d0/7d0*cost**2*p1(3)*p2(3)
+  F2K = (kap-lam*2d0/7d0)*p1(1)*p2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*cost*p1(2)*p2(2) + lam*2d0/7d0*cost**2*p1(3)*p2(3)
+  !F2K = (kap-lam)*p1(1)*p2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*cost*p1(2)*p2(2) + lam*cost**2*p1(3)*p2(3)
 
 end subroutine F2_Kernel
 
