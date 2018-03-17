@@ -72,7 +72,6 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
     zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**3 * 2d0/chi**4 
   case ('gkk')
     zker = dz/Hz * (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
-    !zker = (wlf*(chis-chi)*chi/chis)**2 * 2d0/chi**4 * Hz
   case ('ggk')
     zker = dz/Hz * (wlf*(chis-chi)*chi/chis) * 2d0/chi**4 * Hz**2
   case default
@@ -108,6 +107,64 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   deallocate(Hz,chi,D,wlf,pklini,pki)
 
 end subroutine prep_lens_bispectrum
+
+
+subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
+  implicit none
+
+  ![input]
+  ! z, dz  --- redshift points and thier interval
+  ! zs     --- source z
+  ! cp     --- cosmological parameters
+  ! ki     --- CAMB output k
+  ! pklin0 --- CAMB output P(k,z=0)
+  type(cosmoparams), intent(in) :: cp
+  double precision, intent(in)  :: z(:), dz(:), zs, ki(:), pklin0(:)
+
+  ![output]
+  ! ck     --- kappa power spectrum at chis_s
+  double precision, intent(out) :: ck(:)
+
+  !internal
+  integer :: i, zn, kn, ln, l
+  double precision :: chis
+  double precision, allocatable :: Hz(:), chi(:), D(:), wlf(:), pki(:,:), pklini(:,:), pl(:,:), kl(:,:)
+
+  zn = size(z)  !number of z points for z-integral
+  kn = size(ki) !number of CAMB output k
+  ln = size(ck)
+
+  !* get distances and lensing weights
+  allocate(Hz(zn),chi(zn),D(zn),wlf(zn),pklini(zn,kn),pki(zn,kn))
+  D    = D_z(z,cp)  !growth factor
+  chis = C_z(zs,cp) !source comoving distance
+  chi  = C_z(z,cp)  !comoving distance at each z
+  Hz   = H_z(z,cp)  !expansion rate at z
+
+  wlf  = 1.5d0*cp%Om*(cp%H0/3d5)**2*(1d0+z) !matter -> potential conversion factor (matter dominant)
+
+  if (2d0/chi(zn)<ki(1)) write(*,*) 'warning: required minimum k is smaller than input', 2d0/chi(zn), ki(1)
+
+  !* get linear and non-linear Pk at each z
+  do i = 1, zn
+    pklini(i,:) = D(i)**2*pklin0  !linear P(k,z) (i=1 -> z=0)
+  end do
+  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
+
+  !* interpolate k, Pk at k=l/chi
+  allocate(kl(zn,ln),pl(zn,ln))
+  call Limber_k2l(chi,ki,pki,kl,pl)  
+
+  !* kappa aps
+  ck = 0d0
+  do l = 2, ln
+    ck(l) = sum(pl(:,l)*(dz/Hz)*(wlf*(chis-chi)*chi/chis)**2/chi**2)
+  end do
+
+  deallocate(Hz,chi,D,wlf,pklini,pki,pl,kl)
+
+end subroutine prep_lens_aps
+
 
 
 subroutine Limber_k2l(chi,k,Pk,kl,Pl)
