@@ -63,7 +63,10 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
 
   wlf  = 1.5d0*cp%Om*(cp%H0/3d5)**2*(1d0+z) !matter -> potential conversion factor (matter dominant)
 
+  ! check errors
   if (2d0/chi(zn)<ki(1)) write(*,*) 'warning: required minimum k is smaller than input', 2d0/chi(zn), ki(1)
+  if (chis<maxval(chi)) stop 'chis is smaller than maximum of chi in the chi integral'
+
   ! choose kernel for z integral
   bisptype = 'kkk'
   if (present(btype)) bisptype = btype
@@ -144,6 +147,7 @@ subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
   wlf  = 1.5d0*cp%Om*(cp%H0/3d5)**2*(1d0+z) !matter -> potential conversion factor (matter dominant)
 
   if (2d0/chi(zn)<ki(1)) write(*,*) 'warning: required minimum k is smaller than input', 2d0/chi(zn), ki(1)
+  if (chis<maxval(chi)) stop 'chis is smaller than maximum of chi in the chi integral'
 
   !* get linear and non-linear Pk at each z
   do i = 1, zn
