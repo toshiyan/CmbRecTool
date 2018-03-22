@@ -15,7 +15,7 @@ module cmblbisp
 contains
 
 
-subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype,pkout)
+subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype,pkout,knl)
 ! compute k and Pk at k=l/chi, factor (fac) for LSS bispectrum, F2-kernel coefficients (abc), 
 ! weighted potential spectrum (wp), and kappa spectrum at [chi,chi_s] (ck)
   implicit none
@@ -36,9 +36,11 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   ! pkout  --- output Pk data
   character(*), intent(in), optional :: btype
   integer, optional :: pkout
+  double precision, optional :: knl(:)
 
   ![output]
   ! kl, pl --- k and Pk at k=l/chi
+  ! knl    --- nonlinear k at each z
   ! zker   --- z factor for LSS bispectrum
   ! abc    --- F2-kernel coefficients
   ! wp     --- weighted potential power spectrum
@@ -85,6 +87,9 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   do i = 1, zn
     pklini(i,:) = D(i)**2*pklin0  !linear P(k,z) (i=1 -> z=0)
   end do
+
+  !* get knl
+  if (present(knl)) call get_knl(ki,pklini,knl,model)
 
   if (model=='')  pki = pklini  !use linear 
   if (model/='')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
