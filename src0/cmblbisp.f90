@@ -500,8 +500,8 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
   double precision, allocatable :: knl(:), n(:,:)
 
   !select a model
-  if (model=='SC01')  a = [0.25d0,3.5d0,2d0,1d0,2d0,-0.2d0,1d0,0d0,0d0]
-  if (model=='GM12')  a = [0.484d0,3.74d0,-0.849d0,0.392d0,1.013d0,-0.575d0,0.128d0,-0.722d0,-0.926d0]
+  if (model=='SC')  a = [0.25d0,3.5d0,2d0,1d0,2d0,-0.2d0,1d0,0d0,0d0]
+  if (model=='GM')  a = [0.484d0,3.74d0,-0.849d0,0.392d0,1.013d0,-0.575d0,0.128d0,-0.722d0,-0.926d0]
 
   zn = size(kl,dim=1)
   ln = size(kl,dim=2)
@@ -542,14 +542,15 @@ subroutine get_knl(k,PkL,knl,model)
 
   kn = size(k)
   zn = size(PkL,dim=1)
-  if (model=='SC03')  f=1d0/(4d0*pi)
-  if (model=='GM12')  f=1d0/(2d0*pi**2)
+  f=1d0/(2d0*pi**2)
+  if (model=='SC')  f=1d0/(4d0*pi)
 
   do i = 1, zn
     do j = 1, kn
       if ( PkL(i,j)*k(j)**3*f > 1d0 ) then
-        knl(i) = k(j)
         goto 11
+      else
+        knl(i) = k(j)
       end if
     end do
 11  continue
