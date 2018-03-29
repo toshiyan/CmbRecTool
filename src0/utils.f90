@@ -47,6 +47,11 @@ module myutils
     module procedure ave_1d, ave_2d
   end interface ave
 
+  interface save_average
+    module procedure save_average_2d
+  end interface save_average
+
+
   private dlc, pi, iu
 
 contains
@@ -1386,6 +1391,47 @@ function ave_2d(x,d)  result(f)
 end function ave_2d
 
 
+subroutine save_average_2d(f,dat,id,bc)
+  implicit none
+  !I/O
+  character(*), intent(in) :: f
+  double precision, intent(in) :: dat(:,:,:)
+  !(optional)
+  integer, intent(in), optional :: id(2)
+  double precision, intent(in), optional :: bc(:)
+  !internal
+  integer :: ndat, bmax, j
+  double precision :: b(1,size(bc))
+  double precision, allocatable :: mdat(:,:), vdat(:,:)
+
+  if (present(id)) then
+    ndat = size(dat,dim=id(1))
+    bmax = size(dat,dim=id(2))
+  else
+    ndat = size(dat,dim=2)
+    bmax = size(dat,dim=3)
+  end if
+
+  allocate(mdat(ndat,bmax),vdat(ndat,bmax)); mdat=0d0; vdat=0d0
+  do j = 1, ndat
+    call meanvar(dat(:,j,:),mdat(j,:),vdat(j,:))
+  end do
+
+  write(*,*) 'output average and variance'
+  if (present(bc)) then
+    b(1,:) = bc
+    call savetxt(f,b,mdat,vdat,ow=.true.)
+  else
+    call savetxt(f,mdat,vdat,ow=.true.)
+  end if
+
+  deallocate(mdat,vdat)
+
+end subroutine save_average_2d
+
+
+
+
 !//////////////////////////////////////////////////////////////////////////////!
 ! Old functions / subroutines
 !//////////////////////////////////////////////////////////////////////////////!
@@ -1428,7 +1474,6 @@ subroutine meanvar_save(f,b,C)
   deallocate(mC,vC,bb)
 
 end subroutine meanvar_save
-
 
 
 #endif all
