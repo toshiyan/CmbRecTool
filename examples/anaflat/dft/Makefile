@@ -7,10 +7,11 @@ FLAG = -O3 -fpp
 FLAGS = $(FLAG) $(DBAG)
 
 ## Directories ##
-libroot = ../../../
-MyLib = ${libroot}/
-FFTW3 = ${libroot}/pub/FFTW
-
+MyLib = ../../../
+FFTW3 = ${MyLib}/pub/FFTW
+#FFTW3 = /global/common/cori/software/fftw/3.3.4/hsw/intel/
+#MODD = -I$(MyLib)/mod -I$(FFTW3)/include
+#LIBD = -L$(MyLib)/lib -L$(FFTW3)/lib
 MODD = -I$(MyLib)/mod -I$(FFTW3)/api
 LIBD = -L$(MyLib)/lib -L$(FFTW3)
 LINK = -lanaflat -lutils -lfftw3

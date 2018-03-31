@@ -21,7 +21,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   implicit none
 
   ![input]
-  ! model  --- nonlinear matter bispectrum fitting model ('' for linear)
+  ! model  --- nonlinear matter bispectrum fitting model ('TR' for tree level)
   ! z, dz  --- redshift points and thier interval
   ! zs     --- source z
   ! cp     --- cosmological parameters
@@ -50,11 +50,13 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   !internal
   character(4) :: bisptype
   integer :: i, zn, kn
-  double precision :: s0, chis
+  double precision :: s0, chis, h
   double precision, allocatable :: Hz(:), chi(:), D(:), wlf(:), pki(:,:), pklini(:,:)
 
   zn = size(z)  !number of z points for z-integral
   kn = size(ki) !number of CAMB output k
+
+  if (model/='TR'.and.model/='SC'.and.model/='GM') stop 'error (prep_lens_bispectrum): your model is not supported'
 
   !* get distances and lensing weights
   allocate(Hz(zn),chi(zn),D(zn),wlf(zn),pklini(zn,kn),pki(zn,kn))
@@ -62,6 +64,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   chis = C_z(zs,cp) !source comoving distance
   chi  = C_z(z,cp)  !comoving distance at each z
   Hz   = H_z(z,cp)  !expansion rate at z
+  h    = cp%H0/100d0
 
   wlf  = 1.5d0*cp%Om*(cp%H0/3d5)**2*(1d0+z) !matter -> potential conversion factor (matter dominant)
 
@@ -91,23 +94,23 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   !* get knl
   if (present(knl)) call get_knl(ki,pklini,knl,model)
 
-  if (model=='')  pki = pklini  !use linear 
-  if (model/='')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
+  if (model=='TR')  pki = pklini  !use linear 
+  if (model/='TR')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
 
   if (present(pkout)) then
-    call savetxt('pklin.dat',ki/cp%h,pklini(pkout,:)*cp%h**3,ow=.true.)
-    call savetxt('pk.dat',ki/cp%h,pki(pkout,:)*cp%h**3,ow=.true.)
+    call savetxt('pklin.dat',ki/h,pklini(pkout,:)*h**3,ow=.true.)
+    call savetxt('pk.dat',ki/h,pki(pkout,:)*h**3,ow=.true.)
   end if
 
   !* sigma_8
-  s0 = dsqrt(pk2sigma(8d0/(cp%H0/100d0),ki,pki(1,:)))
+  s0 = dsqrt(pk2sigma(8d0/h,ki,pki(1,:)))
   write(*,*) 'sigma8 = ', s0
 
   !* interpolate k, Pk at k=l/chi
   call Limber_k2l(chi,ki,pki,kl,pl)  
 
   !* precompute F2-kernel coefficients a, b, c 
-  if (model/='')  call precompute_coeff_abc(D*s0,kl,ki,pklini,abc,model)
+  if (model/='TR')  call precompute_coeff_abc(D*s0,kl,ki,pklini,abc,model)
 
   !* precompute for post born
   call precompute_postborn(dz/Hz,chi,chis,wlf,kl,pl,wp,ck)
@@ -237,7 +240,6 @@ subroutine F2_Kernel(k,p1,p2,F2K,lambda,kappa)
 
   cost = (k(3)**2-k(1)**2-k(2)**2)/(2d0*k(1)*k(2)) !cos(theta) of vectors k1 and k2
   F2K = (kap-lam*2d0/7d0)*p1(1)*p2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*cost*p1(2)*p2(2) + lam*2d0/7d0*cost**2*p1(3)*p2(3)
-  !F2K = (kap-lam)*p1(1)*p2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*cost*p1(2)*p2(2) + lam*cost**2*p1(3)*p2(3)
 
 end subroutine F2_Kernel
 
@@ -500,8 +502,14 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
   double precision, allocatable :: knl(:), n(:,:)
 
   !select a model
-  if (model=='SC')  a = [0.25d0,3.5d0,2d0,1d0,2d0,-0.2d0,1d0,0d0,0d0]
-  if (model=='GM')  a = [0.484d0,3.74d0,-0.849d0,0.392d0,1.013d0,-0.575d0,0.128d0,-0.722d0,-0.926d0]
+  select case (model)
+  case('SC') 
+    a = [0.25d0,3.5d0,2d0,1d0,2d0,-0.2d0,1d0,0d0,0d0]
+  case('GM')  
+    a = [0.484d0,3.74d0,-0.849d0,0.392d0,1.013d0,-0.575d0,0.128d0,-0.722d0,-0.926d0]
+  case default
+    stop 'error (precompute_coeff_abc): need to specify model of the nonlinear correction'
+  end select
 
   zn = size(kl,dim=1)
   ln = size(kl,dim=2)
@@ -542,8 +550,13 @@ subroutine get_knl(k,PkL,knl,model)
 
   kn = size(k)
   zn = size(PkL,dim=1)
-  f=1d0/(2d0*pi**2)
-  if (model=='SC')  f=1d0/(4d0*pi)
+
+  select case(model)
+  case ('SC')
+    f = 1d0/(4d0*pi)
+  case default
+    f = 1d0/(2d0*pi**2)
+  end select
 
   do i = 1, zn
     do j = 1, kn

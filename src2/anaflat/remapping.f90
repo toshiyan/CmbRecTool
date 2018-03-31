@@ -140,6 +140,7 @@ end subroutine kap2def_1d
 
 
 subroutine remap_lin(nn,D,lx,ly,Tlm,plm)
+! remapping with only dphi x dT term
   implicit none
   !I/O
   integer, intent(in) :: nn(2)
@@ -154,8 +155,10 @@ subroutine remap_lin(nn,D,lx,ly,Tlm,plm)
 
   allocate(def(npix,2),dT(npix,2))
 
+  !deflection angle
   def(:,1) = -iu*lx*plm
   def(:,2) = -iu*ly*plm
+  !derivative of temperature
   dT(:,1) = -iu*lx*Tlm
   dT(:,2) = -iu*ly*Tlm
 

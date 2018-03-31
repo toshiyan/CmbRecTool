@@ -1,19 +1,17 @@
 !///////////////////////////////////////////////////////////////////////!
 ! * Reconstructing cosmic birefringence fluctuations from Q/U maps
-! * Toshiya Namikawa
 !///////////////////////////////////////////////////////////////////////!
 
 program main
   use readfile,  only: set_params_file, read_prm, read_str, read_log, read_int, read_dbl, read_val
   use myutils,   only: str, meanvar, savetxt, loadtxt, linspace
   use myconst,   only: dlc, pi, iu, twopi, Tcmb
-  use mycls,     only: cl2c2d, alm2bcl_flat, binned_ells, calcbcl_flat
+  use mycls,     only: cl2c2d, alm2bcl_flat, binned_ells, calcbcl_flat, readcl_camb
   use anaflat,   only: elarray, window_generate, gaussian_alm, window_norm, elarrays
   use myfftw,    only: dft, dft_pol
-  use recflat,   only: quadeb_cb, alflat_eb_cb, quadeb, alflat_eb
+  use rotrecflat, only: quadeb_cb, alflat_eb_cb
   use remapping
   use nldd_flat, only: alxy_flat
-  use utils_bk,  only: readcl_bk
   implicit none
   character(1) :: rtype
   integer :: el(2), rL(2), oL(2), sL(2)
@@ -57,8 +55,10 @@ program main
   call elarrays(nn,D,elx=elx,els=els,eli=linv)
 
   !* read theoretical CMB power spectrum for filtering
-  allocate(C1d(3,eL(2)),C2d(3,npix))
-  call readcl_bk(read_str('clee'),eL,.true.,CEE=C1d(1,:),CBB=C1d(2,:))
+  allocate(C1d(4,eL(2)),C2d(3,npix))
+  call readcl_camb(C1d,read_str('cls'),eL,.true.,.true.)
+  C1d(1,:) = C1d(2,:)
+  C1d(2,:) = C1d(3,:)
   call cl2c2d(els,C1d(1,:),eL,C2d(1,:))
   call cl2c2d(els,C1d(2,:),eL,C2d(2,:))
   C1d(3,:) = 2d-4*pi/linspace(1,eL(2))**2

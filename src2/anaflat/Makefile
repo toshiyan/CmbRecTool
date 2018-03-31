@@ -12,11 +12,13 @@ FLAG = -O3 -fpp
 FLAGS = $(FLAG) $(DBAG)
 
 ## Directories ##
-libroot = ../../
-MyLib = ${libroot}
-FFTW3 = ${libroot}/pub/FFTW/
-cfitsio = ${libroot}/pub/cfitsio
+MyLib = ../../
 
+#FFTW3 = /global/common/cori/software/fftw/3.3.4/hsw/intel/
+#MODD = -I$(FFTW3)/include -I$(MyLib)/mod
+#LIBD = -L$(cfitsio) -L$(FFTW3)/lib -L$(MyLib)/lib
+cfitsio = ${MyLib}/pub/cfitsio
+FFTW3   = ${MyLib}/pub/FFTW/
 MODD = -I$(FFTW3)/api -I$(MyLib)/mod
 LIBD = -L$(cfitsio) -L$(FFTW3) -L$(MyLib)/lib
 LINK = -lutils -lcfitsio -lfftw3

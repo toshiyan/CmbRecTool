@@ -3,17 +3,16 @@ exename=exe
 
 ## Complier and options ##
 FC = ifort
-FLAG = -openmp -openmp-report2 -O3 -ip -fpp -error-limit 5 -heap-arrays
-DBAG = -check all -std -gen_interfaces -fpe0 -ftrapuv -traceback
+FLAG = -O3 -ip -fpp
+#DBAG = -check all -std -gen_interfaces -fpe0 -ftrapuv -traceback
 FLAGS = $(FLAG) $(DBAG)
 
 ## Directories ##
-libroot = ../../../
-MyLib = ${libroot}
-healpix = ${libroot}/pub/Healpix
-LAPACK = ${libroot}/pub/LAPACK95/lib
-FFTW3 = ${libroot}/pub/FFTW
-cfitsio = ${libroot}/pub/cfitsio
+MyLib = ../../../
+healpix = ${MyLib}/pub/Healpix
+LAPACK = ${MyLib}/pub/LAPACK95/lib
+FFTW3 = ${MyLib}/pub/FFTW
+cfitsio = ${MyLib}/pub/cfitsio
 
 MODD = -I$(LAPACK) -I$(MyLib)/mod -I$(FFTW3)/api
 LIBD = -L$(LAPACK) -L$(MyLib)/lib -L$(cfitsio) -L$(FFTW3)

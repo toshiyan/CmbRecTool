@@ -504,14 +504,26 @@ end subroutine fourier_filter_2d
 
 
 subroutine gaussian_alm_2darray(nn,D,iL,alm,Cl,fix)
-!//// Generate Multipoles (al) in 2D Fourier space ////!
-!note: satisfy a^*_l = a_{-l}
+! Generate 1D-array random gaussian fields in 2D Fourier space for a given isotropic spectrum
+! Note: satisfy a^*_l = a_{-l}
   implicit none
-  !I/O
-  logical, intent(in), optional :: fix
+
+  ![input]
+  ! nn(2) --- x and y grid number
+  ! D(2)  --- x and y length
+  ! iL(2) --- min/max multipoles of the random gaussian fields
+  ! Cl(:) --- power spectrum
   integer, intent(in) :: iL(2), nn(2)
   double precision, intent(in) :: Cl(:), D(2)
+
+  ![in-output]
+  ! alm(:,:) --- random gaussian fields of a nn(1) x nn(2) array
   complex(dlc), intent(inout) :: alm(:,:)
+
+  !(optional)
+  ! fix   --- use sqrt{Cl} for alm (not random)
+  logical, intent(in), optional :: fix
+
   !internal
   integer :: i, j, n, l0, l1
   integer :: ijmin(2), ijmax(2)
@@ -614,13 +626,25 @@ end subroutine gaussian_alm_2darray
 
 
 subroutine gaussian_alm_1darray(nn,D,iL,alm,Cl,fix)
-!//// Generate Multipoles (al) in 1D Fourier space ////!
+! Generate 1D-array random gaussian fields in 2D Fourier space for a given isotropic spectrum
   implicit none
-  !I/O
-  logical, intent(in), optional :: fix
+
+  ![input]
+  ! nn(2) --- x and y grid number
+  ! D(2)  --- x and y length
+  ! iL(2) --- min/max multipoles of the random gaussian fields
+  ! Cl(:) --- power spectrum
   integer, intent(in) :: iL(2), nn(2)
   double precision, intent(in) :: Cl(:), D(2)
+
+  ![in-output]
+  ! alm(:) --- nn(1) x nn(2) size random gaussian fileds
   complex(dlc), intent(inout) :: alm(:)
+
+  !(optional)
+  ! fix   --- use sqrt{Cl} for alm (not random)
+  logical, intent(in), optional :: fix
+
   !internal
   integer :: i, j, n, npixc, npix, l0, l1
   double precision :: x, y, dd(1:2), d0, l

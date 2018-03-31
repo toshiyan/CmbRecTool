@@ -80,23 +80,6 @@ program main
     !* linear phi remapping
     call remap_lin(nn,D,lx,ly,T,klm*lfac)
 
-#ifdef all
-    def(:,1) = -iu*lx*klm*lfac
-    def(:,2) = -iu*ly*klm*lfac
-    dT(:,1) = -iu*lx*T
-    dT(:,2) = -iu*ly*T
-    call dft(def(:,1),nn,D,-1)
-    call dft(def(:,2),nn,D,-1)
-    call dft(dT(:,1),nn,D,-1)
-    call dft(dT(:,2),nn,D,-1)
-
-    !* remapping by deflection vector
-    dT = def*dT
-    call dft(dT(:,1),nn,D,1)
-    call dft(dT(:,2),nn,D,1)
-    T = T + sum(dT,dim=2)
-#endif all
-
     !add noise and reconstruction
     allocate(est(2,npix));  est = 0d0
     T = T*Il+nlm

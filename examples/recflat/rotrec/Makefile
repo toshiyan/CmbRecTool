@@ -15,7 +15,7 @@ FFTW3 = ${libroot}/pub/FFTW
 
 MODD = -I$(MyLib)/mod -I$(FFTW3)/api
 LIBD = -L$(MyLib)/lib -L$(FFTW3)
-LINK = -lbk -lnldd -lanaflat -lutils -lfftw3
+LINK = -lnldd -lanaflat -lutils -lfftw3
 
 OPTION = $(MODD) $(LIBD) $(LINK)
 

@@ -7,9 +7,8 @@ FLAG = -O3 -fpp
 FLAGS = $(FLAG) $(DBAG)
 
 ## Directories ##
-libroot = ../../../
-MyLib = ${libroot}
-FFTW3 = ${libroot}/pub/FFTW
+MyLib = ../../../
+FFTW3 = ${MyLib}/pub/FFTW
 
 MODD = -I$(MyLib)/mod -I$(FFTW3)/api
 LIBD = -L$(MyLib)/lib -L$(FFTW3)

@@ -21,7 +21,7 @@ module myfunc
 
   !* cosmological parameters
   type cosmoparams !nu=On/Om
-    double precision :: h=0.7d0, H0=70d0, Ov=0.7d0, Om=0.3d0, Ok=0d0, w0=-1d0, wa=0d0, nu=4.38225537d-2, On=1.31467661d-2
+    double precision :: H0=70d0, Ov=0.7d0, Om=0.3d0, Ok=0d0, w0=-1d0, wa=0d0, nu=4.38225537d-2
   end type cosmoparams
 
   !* local parameters
