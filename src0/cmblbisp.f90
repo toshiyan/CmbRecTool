@@ -343,7 +343,7 @@ end subroutine bisp_fold
 
 
 subroutine bisp_sque(eL,k,Pk,fac,abc,wp,ck,l0,bl,btype,ltype,lambda,kappa)
-! squeezed LSS bispectrum
+! squeezed bispectrum
   implicit none
   !I/O
   character(*), intent(in), optional :: btype, ltype
@@ -364,7 +364,10 @@ subroutine bisp_sque(eL,k,Pk,fac,abc,wp,ck,l0,bl,btype,ltype,lambda,kappa)
   if (present(lambda))  lam = lambda
   if (present(kappa))   kap = kappa
 
-  do l = max(l0,eL(1)), eL(2)
+  !do l = max(l0,eL(1)), eL(2)
+  bl = 0d0
+  do l = eL(1), eL(2)
+    if (2*l<l0) cycle
     bisp = 0d0
     if (b/='LSS') call bisp_postborn(l0,l,l,wp,ck,bisp)
     if (b/='pb') then
@@ -451,6 +454,46 @@ function snr_xbisp(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck,btype)  result(f)
   f = tot
 
 end function snr_xbisp
+
+
+function snr_bisp_assym(eL1,eL2,eL3,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
+! SNR sum of LSS bispectrum
+  implicit none
+  integer, intent(in) :: eL1(2), eL2(2), eL3(2), zn
+  double precision, intent(in) :: k(:,:), Pk(:,:), Cl(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
+  integer :: l1, l2, l3, i
+  double precision :: f, cov, bisp(2), tot, F2(1:3)
+
+  tot = 0d0
+  do l1 = eL1(1), eL1(2)
+    !write(*,*) l1
+    do l2 = eL2(1), eL2(2)
+      do l3 = eL3(1), eL3(2)
+        if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
+        if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
+        if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
+        if (mod(l1+l2+l3,2)==1) cycle
+        bisp = 0d0
+        !compute F2 kernel at each z, and take sum
+        do i = 1, zn
+          call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
+          call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
+          call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
+          bisp(1) = bisp(1) + fac(i) * (F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
+        end do
+        call bisp_postborn(l1,l2,l3,wp,ck,bisp(2))
+        !flat sky -> full sky
+        bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
+        !SNR
+        cov = 6d0*Cl(l1)*Cl(l2)*Cl(l3)
+        tot = tot + sum(bisp)**2/cov
+      end do
+    end do
+  end do
+
+  f = tot
+
+end function snr_bisp_assym
 
 
 function snr_bisp(eL,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
