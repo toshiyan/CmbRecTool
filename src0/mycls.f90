@@ -623,23 +623,25 @@ subroutine calccl_dpc(cl,iL,alm1,alm2,f,norm)
   character(*), intent(in), optional :: f
   double precision, intent(in), optional :: norm
   !intenral
-  integer :: l, eL(2)
+  integer :: l, lmax
 
-  eL = [1,size(cl)]
-  if (eL(2)>iL(2))  stop 'error (calccl_dpc): not enough multipoles of input alm'
+  lmax = size(cl)
 
+  cl = 0d0
   if (present(alm2)) then
-    do l = eL(1), eL(2)
+    do l = 1, lmax
+      if (l<iL(1).or.l>iL(2)) cycle
       cl(l) = ( dble(alm1(l,0)*alm2(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm2(l,1:l))))/(2.*l+1.)
     end do
   else
-    do l = eL(1), eL(2)
+    do l = 1, lmax
+      if (l<iL(1).or.l>iL(2)) cycle
       cl(l) = ( dble(alm1(l,0)*alm1(l,0)) + 2.*sum(alm1(l,1:l)*conjg(alm1(l,1:l))))/(2.*l+1.)
     end do
   end if
 
   if (present(norm))  cl = cl*norm
-  if (present(f))     call savetxt(f,linspace(1,eL(2)),cl)
+  if (present(f))     call savetxt(f,linspace(1,lmax),cl)
 
 end subroutine calccl_dpc
 
