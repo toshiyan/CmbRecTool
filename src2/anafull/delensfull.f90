@@ -12,11 +12,12 @@ module delensfull
 contains 
 
 
-subroutine LensingB(nside,WElm,Wglm,lBlm,eL,tL)
+subroutine LensingB(nside,WElm,Wglm,lBlm,eL,tL,gL)
   implicit none
   !I/O
-  integer, intent(in) :: eL(2), tL(2), nside
-  complex(dlc), intent(in), dimension(0:tL(2),0:tL(2)) :: WElm, Wglm
+  integer, intent(in) :: eL(2), tL(2), gL(2), nside
+  complex(dlc), intent(in), dimension(0:tL(2),0:tL(2)) :: WElm
+  complex(dlc), intent(in), dimension(0:gL(2),0:gL(2)) :: Wglm
   complex(dlc), intent(out), dimension(0:eL(2),0:eL(2)) :: lBlm
   !internal
   integer :: l, m, npix
@@ -24,31 +25,30 @@ subroutine LensingB(nside,WElm,Wglm,lBlm,eL,tL)
   complex(dlc), dimension(:,:,:), allocatable :: alm
 
   npix = 12*nside**2
-  allocate(alm(2,0:tL(2),0:tL(2)))
+  allocate(A1(0:npix-1,2),A3(0:npix-1,2),A(0:npix-1,2))
 
   write(*,*) 'Elm to map (spin-1 transform)'
-  alm = 0d0
+  allocate(alm(2,0:tL(2),0:tL(2))); alm = 0d0
   do l = tL(1), tL(2)
     alm(1,l,:) = WElm(l,:)*dsqrt(dble((l+2)*(l-1))*0.5)
   end do 
-  allocate(A1(0:npix-1,2))
   call alm2map_spin(nside,tL(2),tL(2),1,alm,A1)
 
   write(*,*) 'Elm to map (spin-3 transform)'
-  allocate(A3(0:npix-1,2))
   alm = 0d0
   do l = tL(1), tL(2)
     alm(1,l,:) = WElm(l,:)*dsqrt(dble((l-2)*(l+3))*0.5)
   end do 
   call alm2map_spin(nside,tL(2),tL(2),3,alm,A3)
+  deallocate(alm)
 
   write(*,*) 'glm to map (spin-1 transform)'
-  allocate(A(0:npix-1,2))
+  allocate(alm(2,0:gL(2),0:gL(2))); alm=0d0
   alm = 0d0
-  do l = tL(1), tL(2)
+  do l = gL(1), gL(2)
     alm(1,l,:) = Wglm(l,:)*dsqrt(dble(l*(l+1))*0.5)
   end do 
-  call alm2map_spin(nside,tL(2),tL(2),1,alm,A)
+  call alm2map_spin(nside,gL(2),gL(2),1,alm,A)
   deallocate(alm)
 
   !convolution
