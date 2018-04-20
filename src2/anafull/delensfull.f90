@@ -12,13 +12,13 @@ module delensfull
 contains 
 
 
-subroutine LensingB(nside,WElm,Wglm,lBlm,eL,tL,gL)
+subroutine LensingB(nside,WElm,Wglm,lBlm,eL,gL,bL)
   implicit none
   !I/O
-  integer, intent(in) :: eL(2), tL(2), gL(2), nside
-  complex(dlc), intent(in), dimension(0:tL(2),0:tL(2)) :: WElm
+  integer, intent(in) :: eL(2), gL(2), bL(2), nside
+  complex(dlc), intent(in), dimension(0:eL(2),0:eL(2)) :: WElm
   complex(dlc), intent(in), dimension(0:gL(2),0:gL(2)) :: Wglm
-  complex(dlc), intent(out), dimension(0:eL(2),0:eL(2)) :: lBlm
+  complex(dlc), intent(out), dimension(0:bL(2),0:bL(2)) :: lBlm
   !internal
   integer :: l, m, npix
   real(dl), dimension(:,:), allocatable :: A1,A3,A,map
@@ -28,18 +28,18 @@ subroutine LensingB(nside,WElm,Wglm,lBlm,eL,tL,gL)
   allocate(A1(0:npix-1,2),A3(0:npix-1,2),A(0:npix-1,2))
 
   write(*,*) 'Elm to map (spin-1 transform)'
-  allocate(alm(2,0:tL(2),0:tL(2))); alm = 0d0
-  do l = tL(1), tL(2)
+  allocate(alm(2,0:eL(2),0:eL(2))); alm = 0d0
+  do l = eL(1), eL(2)
     alm(1,l,:) = WElm(l,:)*dsqrt(dble((l+2)*(l-1))*0.5)
   end do 
-  call alm2map_spin(nside,tL(2),tL(2),1,alm,A1)
+  call alm2map_spin(nside,eL(2),eL(2),1,alm,A1)
 
   write(*,*) 'Elm to map (spin-3 transform)'
   alm = 0d0
-  do l = tL(1), tL(2)
+  do l = eL(1), eL(2)
     alm(1,l,:) = WElm(l,:)*dsqrt(dble((l-2)*(l+3))*0.5)
   end do 
-  call alm2map_spin(nside,tL(2),tL(2),3,alm,A3)
+  call alm2map_spin(nside,eL(2),eL(2),3,alm,A3)
   deallocate(alm)
 
   write(*,*) 'glm to map (spin-1 transform)'
@@ -60,8 +60,8 @@ subroutine LensingB(nside,WElm,Wglm,lBlm,eL,tL,gL)
   map(:,2) = A(:,1)*(A1(:,2)-A3(:,2)) + A(:,2)*(A1(:,1)+A3(:,1))
   deallocate(A1,A3,A)
 
-  allocate(alm(2,0:eL(2),0:eL(2)))
-  call map2alm_spin(nside,eL(2),eL(2),2,map,alm)
+  allocate(alm(2,0:bL(2),0:bL(2)))
+  call map2alm_spin(nside,bL(2),bL(2),2,map,alm)
   deallocate(map)
 
   lBlm = alm(2,:,:)
