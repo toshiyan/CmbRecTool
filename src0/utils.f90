@@ -1388,6 +1388,7 @@ function ave_2d(x,d)  result(f)
   allocate(f(n))
   f = sum(x,dim=d)/dble(s)
 
+
 end function ave_2d
 
 
