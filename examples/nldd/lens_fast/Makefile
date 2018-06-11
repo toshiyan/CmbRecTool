@@ -4,7 +4,7 @@ exename=exe
 
 ## Complier and options ##
 FC = ifort
-FLAG = -openmp -O3 -ip -fpp
+FLAG = -qopenmp -O3 -ip -fpp
 DBAG = -check all -std -gen_interfaces -fpe0 -ftrapuv -traceback
 FLAGS = $(FLAG) #$(DBAG)
 
