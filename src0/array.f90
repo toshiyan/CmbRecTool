@@ -350,7 +350,7 @@ subroutine sort_1d(refval,ii)
 !Sorting input array 
   implicit none
   !I/O
-  integer, intent(out) :: ii(:) !label
+  integer, intent(out), optional :: ii(:) !label
   double precision, intent(inout) :: refval(:) !values
   !internal
   integer :: i, n, m, id, pn
@@ -362,20 +362,24 @@ subroutine sort_1d(refval,ii)
 
   !set array
   array = refval
-  do n = 1, pn
-    ii(n) = n
-  end do
+  if (present(ii)) then
+    do n = 1, pn
+      ii(n) = n
+    end do
+  end if
 
   !sort
   do n = 1, pn
     do m = n + 1, pn
       if(array(n)>=array(m)) cycle
       dummy = array(n)
-      id = ii(n)
       array(n) = array(m)
-      ii(n) = ii(m)
       array(m) = dummy
-      ii(m) = id
+      if (present(ii)) then
+        id = ii(n)
+        ii(n) = ii(m)
+        ii(m) = id
+      end if
     end do
   end do 
 
