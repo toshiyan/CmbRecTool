@@ -13,92 +13,6 @@ module nldd_flat
 contains
 
 
-subroutine TBEB_FLAT(rL,eL,Alg,Alc,fTE,fEE,W1,W2,gln,gle,lxcut)
-!* computing unnormalized cross-power spectrum TBxEB
-  implicit none
-  !I/O
-  integer, intent(in) :: el(1:2), rL(1:2)
-  integer, intent(in), optional :: gln, lxcut
-  double precision, intent(in) :: fTE(:), fEE(:), W1(:), W2(:)
-  double precision, intent(in), optional :: gle
-  double precision, intent(out) :: Alg(:), Alc(:)
-  !internal
-  type(gauss_legendre_params) :: GL
-  integer :: l, L1, L2, i, n
-  double precision :: eps, lx1, lx2
-  double precision, dimension(:), allocatable :: phi, intg, intc
-
-  write(*,*) 'TBEB flat'
-
-  !* prepare GL quadrature
-  n = rL(2)
-  eps = 1d-14
-  if (present(gln)) n = gln
-  if (present(gle)) eps = gle
-  call gl_initialize(GL,n,eps)
-
-  allocate(phi(GL%n),intg(GL%n),intc(GL%n));  phi=0d0;  intg=0d0;  intc=0d0
-  phi = pi + pi*GL%z
-
-  !* calculate Al
-  do l = eL(1), eL(2) ! for lensing multipoles 
-    L1 = rL(1)
-    !* integral
-    do n = 1, rL(2)-rL(1)
-      L1 = L1 + 1
-      do i = 1, GL%n
-        if (present(lxcut)) then
-          lx1 = dble(L1)*dcos(phi(i))
-          lx2 = dble(l) - lx1
-          if (abs(lx1)<lxcut.or.abs(lx2)<lxcut) cycle
-        end if
-        L2 = int(dsqrt(dble(l)**2+dble(L1)**2-2*l*L1*dcos(phi(i))))
-        call KTBEB(rL,l,L1,phi(i),fTE(L1),fEE(L1),[W1(L1),W2(L2)],intg(i),intc(i))
-      end do
-      Alg(l) = Alg(l) + dble(L1)*sum(intg*GL%w)*pi/(2*pi)**2
-      Alc(l) = Alc(l) + dble(L1)*sum(intc*GL%w)*pi/(2*pi)**2
-    end do
-  end do
-
-  deallocate(phi,intg,intc)
-  call gl_finalize(GL)
-
-end subroutine TBEB_FLAT
-
-
-subroutine KTBEB(rL,l,L1,phi,fTE,fEE,W,Kg,Kc)
-  implicit none
-  !I/O
-  integer, intent(in) :: rL(1:2), l, L1
-  double precision, intent(in) :: phi, fTE, fEE, W(2)
-  double precision, intent(out) :: Kg, Kc
-  !internal
-  double precision :: al0, aL1, aL2, sin2, L1l(2), L2l(2), csp1(2), csp2(2), vL0(2), vL1(2), vL2(2)
-
-  !* l vectors
-  vl0 = [dble(l),0d0]
-  vL1 = [dble(L1)*dcos(phi),dble(L1)*dsin(phi)]
-  vL2 = vl0 - vL1
-  al0 = dble(l)
-  aL1 = dble(L1)
-  aL2 = dsqrt(dot_product(vL2,vL2))
-
-  Kg = 0d0
-  Kc = 0d0
-  if (rL(1)<=int(aL2).and.int(aL2)<=rL(2)) then 
-    L1l = [dot_product(vl0,vL1),vL1(1)*vl0(2)-vL1(2)*vl0(1)]
-    L2l = [dot_product(vl0,vL2),vL2(1)*vl0(2)-vL2(2)*vl0(1)]
-    csp1 = [L1l(1)/(aL1*al0),- L1l(2)/(aL1*al0)]
-    csp2 = [L2l(1)/(aL2*al0),- L2l(2)/(aL2*al0)]
-    sin2 = 2d0*(csp1(2)*csp2(1)-csp2(2)*csp1(1))*(csp1(1)*csp2(1)+csp1(2)*csp2(2))
-    Kg = (fTE*L1l(1)*sin2)*(fEE*L1l(1)*sin2)*W(1)*W(2)
-    Kc = (fTE*L1l(2)*sin2)*(fEE*L1l(2)*sin2)*W(1)*W(2)
-  end if
-
-end subroutine KTBEB
-
-
-
 subroutine ALXY_FLAT(est,rL,eL,Alg,Alc,fC,W1,W2,weight,gln,gle,lxcut)
 ! * integrating fXY*gXY
   implicit none
@@ -203,6 +117,113 @@ subroutine KEB(rL,l,L1,phi,fC,W1,W2,Kg,Kc,ftype)
   double precision, intent(in) :: phi, fC, W1, W2
   double precision, intent(out) :: Kg, Kc
   !internal
+  double precision :: aL0, aL1, aL2, sin2m, sin2p, sin22, L1l(2), L2l(2), cos1, cos2, sin1, sin2, vL0(2), vL1(2), vL2(2)
+
+  !* l vectors
+  vL0 = [dble(L),0d0]
+  vL1 = [dble(L1)*dcos(phi),dble(L1)*dsin(phi)]
+  vL2 = vL0 - vL1
+  aL0 = dble(L)
+  aL1 = dble(L1)
+  aL2 = dsqrt(dot_product(vL2,vL2))
+
+  Kg = 0d0
+  Kc = 0d0
+  if (rL(1)<=int(aL2).and.int(aL2)<=rL(2)) then 
+    ! L1 * L and L1 x L
+    L1l  = [dot_product(vL0,vL1),vL1(1)*vL0(2)-vL1(2)*vL0(1)]
+    L2l  = [dot_product(vL0,vL2),vL2(1)*vL0(2)-vL2(2)*vL0(1)]
+    ! cos(phi), sin(phi)
+    cos1 = L1l(1)/(aL1*aL0)
+    sin1 = - L1l(2)/(aL1*aL0)
+    cos2 = L2l(1)/(aL2*aL0)
+    sin2 = - L2l(2)/(aL2*aL0)
+    ! sin2(phi1-phi2)
+    sin2m = 2d0*(sin1*cos2-sin2*cos1)*(cos1*cos2+sin1*sin2)
+    ! sin2(phi1+phi2)
+    sin2p = 2d0*(sin1*cos2+sin2*cos1)*(cos1*cos2-sin1*sin2)
+    ! sin2(phi1)
+    sin22 = 2d0*sin2*cos2
+    select case (ftype)
+    case ('lensing')
+      Kg = (fC*L1l(1)*sin2m)**2*W1*W2
+      Kc = (fC*L1l(2)*sin2m)**2*W1*W2
+    case ('rotation')
+      Kg = (2d0*fC)**2*(1d0-sin2m**2)*W1*W2
+    case ('patchytau')
+      Kg = (fC*sin2m)**2*W1*W2
+    case ('t2p0')
+      Kg = (fC*sin22)**2*W1*W2
+      Kc = (fC)**2*(1d0-sin22**2)*W1*W2
+    case ('spinflip')
+      Kg = (fC*sin2p)**2*W1*W2
+      Kc = (fC)**2*(1d0-sin2p**2)*W1*W2
+    end select
+  end if
+
+end subroutine KEB
+
+
+subroutine TBEB_FLAT(rL,eL,Alg,Alc,fTE,fEE,W1,W2,gln,gle,lxcut)
+!* computing unnormalized cross-power spectrum TBxEB
+  implicit none
+  !I/O
+  integer, intent(in) :: el(1:2), rL(1:2)
+  integer, intent(in), optional :: gln, lxcut
+  double precision, intent(in) :: fTE(:), fEE(:), W1(:), W2(:)
+  double precision, intent(in), optional :: gle
+  double precision, intent(out) :: Alg(:), Alc(:)
+  !internal
+  type(gauss_legendre_params) :: GL
+  integer :: l, L1, L2, i, n
+  double precision :: eps, lx1, lx2
+  double precision, dimension(:), allocatable :: phi, intg, intc
+
+  write(*,*) 'TBEB flat'
+
+  !* prepare GL quadrature
+  n = rL(2)
+  eps = 1d-14
+  if (present(gln)) n = gln
+  if (present(gle)) eps = gle
+  call gl_initialize(GL,n,eps)
+
+  allocate(phi(GL%n),intg(GL%n),intc(GL%n));  phi=0d0;  intg=0d0;  intc=0d0
+  phi = pi + pi*GL%z
+
+  !* calculate Al
+  do l = eL(1), eL(2) ! for lensing multipoles 
+    L1 = rL(1)
+    !* integral
+    do n = 1, rL(2)-rL(1)
+      L1 = L1 + 1
+      do i = 1, GL%n
+        if (present(lxcut)) then
+          lx1 = dble(L1)*dcos(phi(i))
+          lx2 = dble(l) - lx1
+          if (abs(lx1)<lxcut.or.abs(lx2)<lxcut) cycle
+        end if
+        L2 = int(dsqrt(dble(l)**2+dble(L1)**2-2*l*L1*dcos(phi(i))))
+        call KTBEB(rL,l,L1,phi(i),fTE(L1),fEE(L1),[W1(L1),W2(L2)],intg(i),intc(i))
+      end do
+      Alg(l) = Alg(l) + dble(L1)*sum(intg*GL%w)*pi/(2*pi)**2
+      Alc(l) = Alc(l) + dble(L1)*sum(intc*GL%w)*pi/(2*pi)**2
+    end do
+  end do
+
+  deallocate(phi,intg,intc)
+  call gl_finalize(GL)
+
+end subroutine TBEB_FLAT
+
+
+subroutine KTBEB(rL,l,L1,phi,fTE,fEE,W,Kg,Kc)
+  implicit none
+  !I/O
+  integer, intent(in) :: rL(1:2), l, L1
+  double precision, intent(in) :: phi, fTE, fEE, W(2)
+  double precision, intent(out) :: Kg, Kc
+  !internal
   double precision :: al0, aL1, aL2, sin2, L1l(2), L2l(2), csp1(2), csp2(2), vL0(2), vL1(2), vL2(2)
 
   !* l vectors
@@ -221,18 +242,13 @@ subroutine KEB(rL,l,L1,phi,fC,W1,W2,Kg,Kc,ftype)
     csp1 = [L1l(1)/(aL1*al0),- L1l(2)/(aL1*al0)]
     csp2 = [L2l(1)/(aL2*al0),- L2l(2)/(aL2*al0)]
     sin2 = 2d0*(csp1(2)*csp2(1)-csp2(2)*csp1(1))*(csp1(1)*csp2(1)+csp1(2)*csp2(2))
-    select case (ftype)
-    case ('lensing')
-      Kg = (fC*L1l(1)*sin2)**2*W1*W2
-      Kc = (fC*L1l(2)*sin2)**2*W1*W2
-    case ('rotation')
-      Kg = (2d0*fC)**2*(1d0-sin2**2)*W1*W2
-    case ('patchytau')
-      Kg = (fC*sin2)**2*W1*W2
-    end select
+    Kg = (fTE*L1l(1)*sin2)*(fEE*L1l(1)*sin2)*W(1)*W(2)
+    Kc = (fTE*L1l(2)*sin2)*(fEE*L1l(2)*sin2)*W(1)*W(2)
   end if
 
-end subroutine KEB
+end subroutine KTBEB
+
+
 
 
 end module nldd_flat
