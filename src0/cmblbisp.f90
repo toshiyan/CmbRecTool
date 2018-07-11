@@ -194,7 +194,7 @@ subroutine Limber_k2l(chi,k,Pk,kl,Pl)
   do i = 1, zn
     !allocate(y2a(kn))
     !call spline(k,Pk(i,:),kn,0d0,0d0,y2a)
-    do l = 2, ln
+    do l = 1, ln
       kk = dble(l)/chi(i)
       id = neighb(kk,k) !look for neighberest points
       kl(i,l) = kk
@@ -434,7 +434,6 @@ function rebisp_fbin(eL1,eL2,eL3,zn,k,Pk,fac,abc,wp,ck,btype)  result(f)
         if (btype=='pb') call bisp_postborn(l1,l2,l3,wp,ck,bisp)
         !normalization
         hlll = W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
-        !hlll = 1d0
         norm = norm + hlll**2
         !binned bispectrum
         tot  = tot + bisp*hlll**2
@@ -445,6 +444,37 @@ function rebisp_fbin(eL1,eL2,eL3,zn,k,Pk,fac,abc,wp,ck,btype)  result(f)
   f = tot/norm
 
 end function rebisp_fbin
+
+
+function rebisp_fbin_gauss(eL1,eL2,eL3,cl)  result(f)
+! reduced bispectrum with flat binning (a=g+g^2)
+  implicit none
+  integer, intent(in) :: eL1(2), eL2(2), eL3(2)
+  double precision, intent(in) :: cl(:)
+  integer :: l1, l2, l3
+  double precision :: f, norm, bisp, hlll, tot
+
+  tot  = 0d0
+  norm = 0d0
+  do l1 = eL1(1), eL1(2)
+    do l2 = eL2(1), eL2(2)
+      do l3 = eL3(1), eL3(2)
+        if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
+        if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
+        if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
+        bisp = 2d0*(Cl(l1)*Cl(l2)+Cl(l2)*Cl(l3)+Cl(l3)*Cl(l1))
+        !normalization
+        hlll = W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
+        norm = norm + hlll**2
+        !binned bispectrum
+        tot  = tot + bisp*hlll**2
+      end do
+    end do
+  end do
+
+  f = tot/norm
+
+end function rebisp_fbin_gauss
 
 
 function snr_bisp(eL,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
