@@ -715,7 +715,7 @@ subroutine NonLinRatios(plin,z,k,cp,pnl)
         dlin = plin(zi,i)*(k(i)**3/(2*pi**2))
         w = cp%w0+(1d0-a)*cp%wa
         call halofit_T12(k(i),rneff,rncur,rknl,dlin,dnl,Om_m,Om_v,cp%Om,w,cp%nu)
-        pnl(zi,i) = (dnl/dlin)*plin(zi,i)
+        if (dnl>dlin) pnl(zi,i) = (dnl/dlin)*plin(zi,i)
       end if
     end do
 

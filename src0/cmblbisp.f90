@@ -138,7 +138,7 @@ subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
 
   !internal
   integer :: i, zn, kn, ln, l
-  double precision :: chis
+  double precision :: chis, h
   double precision, allocatable :: Hz(:), chi(:), D(:), wlf(:), pki(:,:), pklini(:,:), pl(:,:), kl(:,:)
 
   zn = size(z)  !number of z points for z-integral
@@ -151,6 +151,7 @@ subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
   chis = C_z(zs,cp) !source comoving distance
   chi  = C_z(z,cp)  !comoving distance at each z
   Hz   = H_z(z,cp)  !expansion rate at z
+  h    = cp%H0/100d0
 
   wlf  = 1.5d0*cp%Om*(cp%H0/3d5)**2*(1d0+z) !matter -> potential conversion factor (matter dominant)
 
@@ -162,6 +163,10 @@ subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
     pklini(i,:) = D(i)**2*pklin0  !linear P(k,z) (i=1 -> z=0)
   end do
   call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
+
+  ! check nonlinear Pk
+  call savetxt('Pklin.dat',ki/h,pklini(1,:)*h**3,pklini(zn,:)*h**3,ow=.true.)
+  call savetxt('Pk.dat',ki/h,pki(1,:)*h**3,pki(zn,:)*h**3,ow=.true.)
 
   !* interpolate k, Pk at k=l/chi
   allocate(kl(zn,ln),pl(zn,ln))
@@ -442,6 +447,7 @@ function rebisp_fbin(eL1,eL2,eL3,zn,k,Pk,fac,abc,wp,ck,btype)  result(f)
   end do
 
   f = tot/norm
+  !f = norm
 
 end function rebisp_fbin
 
