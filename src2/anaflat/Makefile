@@ -25,7 +25,7 @@ LINK = -lutils -lcfitsio -lfftw3
 
 OPTION = $(MODD) $(LIBD) $(LINK)
 
-OBJ = anaflat.o myfftw.o mycfitsio.o recflat.o rotrecflat.o taurecflat.o delens.o inp.o remapping.o bispflat.o
+OBJ = anaflat.o myfftw.o mycfitsio.o recflat.o rotrecflat.o taurecflat.o delens.o inp.o remapping.o bispecflat.o
 
 $(target): $(OBJ)
 	ar cr $@ $^

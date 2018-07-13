@@ -383,6 +383,51 @@ subroutine bisp_sque(eL,k,Pk,fac,abc,wp,ck,l0,bl,btype,ltype,lambda,kappa)
 end subroutine bisp_sque
 
 
+subroutine bisp_angl(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,lambda,kappa)
+! squeezed bispectrum
+  implicit none
+  !I/O
+  character(*), intent(in), optional :: btype, ltype
+  integer, intent(in) :: eL(2)
+  double precision, intent(in) :: k(:,:), Pk(:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
+  double precision, intent(out) :: bl(:)
+  double precision, intent(in), optional :: lambda(:), kappa(:)
+  !internal
+  character(8) :: b='', lt=''
+  integer :: l, i, zn, lc
+  double precision :: bisp, F2(3)
+  double precision, allocatable :: lam(:), kap(:)
+
+  zn = size(k,dim=1)
+  if (present(btype)) b  = btype
+  if (present(ltype)) lt = ltype
+
+  allocate(lam(zn),kap(zn)); lam=1d0; kap=1d0
+  if (present(lambda))  lam = lambda
+  if (present(kappa))   kap = kappa
+
+  bl = 0d0
+  lc = int(eL(2)/2)
+  do l = eL(1), eL(2)
+    bisp = 0d0
+    if (b=='pb') call bisp_postborn(l,lc,lc,wp,ck,bisp)
+    if (b=='LSS') then
+      do i = 1, zn
+        call F2_Kernel([k(i,l),k(i,lc),k(i,lc)],abc(:,i,l),abc(:,i,lc),F2(1),lam(i),kap(i))
+        call F2_Kernel([k(i,lc),k(i,l),k(i,lc)],abc(:,i,lc),abc(:,i,l),F2(2),lam(i),kap(i))
+        call F2_Kernel([k(i,lc),k(i,lc),k(i,l)],abc(:,i,lc),abc(:,i,lc),F2(3),lam(i),kap(i))
+        bisp = bisp + fac(i) * (F2(1)*Pk(i,l)*Pk(i,lc) + F2(2)*Pk(i,lc)*Pk(i,l) + F2(3)*Pk(i,lc)*Pk(i,lc))
+      end do
+    end if
+    if (lt=='full') bisp = bisp * W3j_approx(dble(l),dble(lc),dble(lc)) * dsqrt((2d0*l+1d0)*(2d0*lc+1)**2/(4d0*pi))
+    bl(l) = bisp
+  end do
+
+  deallocate(lam,kap)
+
+end subroutine bisp_angl
+
+
 subroutine bisp_postborn(l1,l2,l3,wp,ck,bisp)
 ! compute bispectrum from post-Born correction
   implicit none
