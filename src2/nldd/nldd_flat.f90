@@ -58,8 +58,12 @@ subroutine ALXY_FLAT(est,rL,eL,Alg,Alc,fC,W1,W2,weight,gln,gle,lxcut)
           if (abs(lx1)<lxcut.or.abs(lx2)<lxcut) cycle
         end if
         L2 = int(dsqrt(dble(l)**2+dble(L1)**2-2*l*L1*dcos(phi(i))))
-        if (est=='TT')  call KTT(rL,l,L1,phi(i),fC(L1),fC(L2),W1(L1),W2(L2),intg(i),intc(i),ftype)
-        if (est=='EB')  call KEB(rL,l,L1,phi(i),fC(L1),W1(L1),W2(L2),intg(i),intc(i),ftype)
+        select case(est)
+        case ('TT')
+          call KTT(rL,l,L1,phi(i),fC(L1),fC(L2),W1(L1),W2(L2),intg(i),intc(i),ftype)
+        case ('EB','TB')
+          call KEB(rL,l,L1,phi(i),fC(L1),W1(L1),W2(L2),intg(i),intc(i),ftype)
+        end select
       end do
       Alg(l) = Alg(l) + dble(L1)*sum(intg*GL%w)*pi/(2*pi)**2
       Alc(l) = Alc(l) + dble(L1)*sum(intc*GL%w)*pi/(2*pi)**2
