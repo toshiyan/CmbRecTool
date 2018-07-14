@@ -50,7 +50,7 @@ subroutine bispec_equi(eL,bst,alm,bispec)
   end do
 
   call alm2map(nside,eL(2),eL(2),klm,kmap)
-  bispec = sum(kmap**3)*(4d0*pi)/dble(12*nside**2)
+  bispec = sum(kmap**3)*(4d0*pi)/(12d0*dble(nside)**2)
 
   deallocate(kmap,klm)
 
@@ -82,7 +82,7 @@ subroutine bispec_fold(eL,bst,alm,bispec)
 
   call alm2map(nside,eL(2),eL(2),klm(1:1,:,:),kmap(:,1))
   call alm2map(nside,eL(2),eL(2),klm(2:2,:,:),kmap(:,2))
-  bispec = sum(kmap(:,1)*kmap(:,2)**2) * (4d0*pi)/dble(12*nside**2)
+  bispec = sum(kmap(:,1)*kmap(:,2)**2) * (4d0*pi)/(12d0*dble(nside)**2)
 
   deallocate(kmap,klm)
 
@@ -114,7 +114,7 @@ subroutine bispec_squi(eL,sL,bst,alm,bispec)
 
   call alm2map(nside,eL(2),eL(2),klm(1:1,:,:),kmap(:,1))
   call alm2map(nside,eL(2),eL(2),klm(2:2,:,:),kmap(:,2))
-  bispec = sum(kmap(:,1)*kmap(:,2)**2) * (4d0*pi)/dble(12*nside**2)
+  bispec = sum(kmap(:,1)*kmap(:,2)**2) * (4d0*pi)/(12d0*dble(nside)**2)
 
   deallocate(kmap,klm)
 
@@ -146,7 +146,7 @@ subroutine bispec_angl(eL,aL,l1,bst,alm,bispec)
 
   call alm2map(nside,l1,l1,klm(1:1,:,:),kmap(:,1))
   call alm2map(nside,l1,l1,klm(2:2,:,:),kmap(:,2))
-  bispec = sum(kmap(:,1)*kmap(:,2)**2) * (4d0*pi)/dble(12*nside**2)
+  bispec = sum(kmap(:,1)*kmap(:,2)**2) * (4d0*pi)/(12d0*dble(nside)**2)
 
   deallocate(kmap,klm)
 
