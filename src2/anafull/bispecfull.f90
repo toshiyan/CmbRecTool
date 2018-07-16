@@ -89,7 +89,7 @@ subroutine bispec_fold(eL,bst,alm,bispec)
 end subroutine bispec_fold
 
 
-subroutine bispec_squi(eL,sL,bst,alm,bispec)
+subroutine bispec_sque(eL,sL,bst,alm,bispec)
   implicit none
   !I/O
   integer, intent(in) :: eL(2), sL(2), bst
@@ -118,7 +118,7 @@ subroutine bispec_squi(eL,sL,bst,alm,bispec)
 
   deallocate(kmap,klm)
 
-end subroutine bispec_squi
+end subroutine bispec_sque
 
 
 subroutine bispec_angl(eL,aL,l1,bst,alm,bispec)
