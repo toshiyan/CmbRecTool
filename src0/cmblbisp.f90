@@ -165,8 +165,8 @@ subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
   call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
 
   ! check nonlinear Pk
-  call savetxt('Pklin.dat',ki/h,pklini(1,:)*h**3,pklini(zn,:)*h**3,ow=.true.)
-  call savetxt('Pk.dat',ki/h,pki(1,:)*h**3,pki(zn,:)*h**3,ow=.true.)
+  !call savetxt('Pklin.dat',ki/h,pklini(1,:)*h**3,pklini(zn,:)*h**3,ow=.true.)
+  !call savetxt('Pk.dat',ki/h,pki(1,:)*h**3,pki(zn,:)*h**3,ow=.true.)
 
   !* interpolate k, Pk at k=l/chi
   allocate(kl(zn,ln),pl(zn,ln))
