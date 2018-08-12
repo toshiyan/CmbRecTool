@@ -458,7 +458,7 @@ subroutine calcbcl_flat(bmax,oL,els,Cl,Cb,Vb,tCl,tVl,f,spc)
   double precision, allocatable, dimension(:) :: AL, BL, Ab, vAb, iCl, iVl
 
   spc0 = ''
-  if (size(Cl)<1)  stop 'error (calcBcl_flat): size(Cl) is less than 1'
+  if (size(Cl)<1)  stop 'error (calcbcl_flat): size of 2D cl is less than 1'
   if (present(Cb).and.size(Cb)/=bmax) stop 'error (calcBcl_flat): size(Cb) is not equal to bmax'
   if (present(spc)) spc0 = spc
 
