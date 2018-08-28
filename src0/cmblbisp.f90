@@ -684,7 +684,7 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
 
   !precompute knl and n_eff
   allocate(knl(zn),n(zn,ln)); knl=1d0; n=0d0
-  call get_knl(ki,pli,knl,model)
+  call get_knl(ki,pli,knl)
   call get_neff(ki,kl,pli,n)
 
   !compute a, b and c
@@ -707,10 +707,9 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
 end subroutine precompute_coeff_abc
 
 
-subroutine get_knl(k,PkL,knl,model)
+subroutine get_knl(k,PkL,knl)
 !* get k_NL
   implicit none
-  character(*), intent(in) :: model
   double precision, intent(in) :: k(:), PkL(:,:)
   double precision, intent(out) :: knl(:)
   integer :: kn, zn, i, j
@@ -719,16 +718,9 @@ subroutine get_knl(k,PkL,knl,model)
   kn = size(k)
   zn = size(PkL,dim=1)
 
-  select case(model)
-  case ('SC')
-    f = 1d0/(4d0*pi)
-  case default
-    f = 1d0/(2d0*pi**2)
-  end select
-
   do i = 1, zn
     do j = 1, kn
-      if ( PkL(i,j)*k(j)**3*f > 1d0 ) then
+      if ( PkL(i,j)*k(j)**3/(2d0*pi**2) > 1d0 ) then
         goto 11
       else
         knl(i) = k(j)
