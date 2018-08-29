@@ -92,7 +92,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   end do
 
   !* get knl
-  if (present(knl)) call get_knl(ki,pklini,knl,model)
+  if (present(knl)) call get_knl(ki,pklini,knl)
 
   if (model=='TR')  pki = pklini  !use linear 
   if (model/='TR')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
@@ -103,8 +103,12 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   end if
 
   !* sigma_8
-  s0 = dsqrt(pk2sigma(8d0/h,ki,pki(1,:)))
+  s0 = dsqrt(pk2sigma(8d0/h,ki,pklini(1,:)))
   write(*,*) 'sigma8 = ', s0
+  !do i = 1, zn
+  !  wlf(i) = dsqrt(pk2sigma(8d0/h,ki,pklini(i,:)))
+  !end do
+  !call savetxt('sigmaz.dat',z,wlf)
 
   !* interpolate k, Pk at k=l/chi
   call Limber_k2l(chi,ki,pki,kl,pl)  
@@ -700,6 +704,8 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
       abc(2,i,l) = (1d0 + 0.2d0*a(3)*(n(i,l)+3d0)*qbn )/(1d0+qbn*dsqrt(q*a(7)))
       abc(3,i,l) = (1d0 + (4.5d0*a(4)/(1.5d0+(n(i,l)+3d0)**4d0))*qcn)/(1d0+qcn*dsqrt(q*a(5)))
     end do
+    if (i==1) call savetxt('abc_z0.dat',kl(i,:),abc(1,i,:),abc(2,i,:),abc(3,i,:),ow=.true.)
+    if (i==2) call savetxt('abc_z1.dat',kl(i,:),abc(1,i,:),abc(2,i,:),abc(3,i,:),ow=.true.)
   end do
 
   deallocate(knl,n)
