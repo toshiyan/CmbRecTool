@@ -704,8 +704,8 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
       abc(2,i,l) = (1d0 + 0.2d0*a(3)*(n(i,l)+3d0)*qbn )/(1d0+qbn*dsqrt(q*a(7)))
       abc(3,i,l) = (1d0 + (4.5d0*a(4)/(1.5d0+(n(i,l)+3d0)**4d0))*qcn)/(1d0+qcn*dsqrt(q*a(5)))
     end do
-    if (i==1) call savetxt('abc_z0.dat',kl(i,:),abc(1,i,:),abc(2,i,:),abc(3,i,:),ow=.true.)
-    if (i==2) call savetxt('abc_z1.dat',kl(i,:),abc(1,i,:),abc(2,i,:),abc(3,i,:),ow=.true.)
+    !if (i==1) call savetxt('abc_z0.dat',kl(i,:),abc(1,i,:),abc(2,i,:),abc(3,i,:),ow=.true.)
+    !if (i==2) call savetxt('abc_z1.dat',kl(i,:),abc(1,i,:),abc(2,i,:),abc(3,i,:),ow=.true.)
   end do
 
   deallocate(knl,n)
