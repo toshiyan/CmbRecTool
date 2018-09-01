@@ -4,12 +4,12 @@
 
 module cmblbisp
   use myconst, only: pi
-  use myutils, only: neighb, spline, savetxt
+  use myutils, only: neighb, spline, splint, savetxt
   use myfunc,  only: C_z, H_z, D_z, NonLinRatios, pk2sigma, cosmoparams
   implicit none
 
   private pi
-  private neighb, spline, savetxt
+  private neighb, spline, splint, savetxt
   private C_z, H_z, D_z, NonLinRatios, pk2sigma, cosmoparams
 
 contains
@@ -689,7 +689,7 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
   !precompute knl and n_eff
   allocate(knl(zn),n(zn,ln)); knl=1d0; n=0d0
   call get_knl(ki,pli,knl)
-  call get_neff(ki,kl,pli,n)
+  call get_neff(ki,kl,pli,n,model)
 
   !compute a, b and c
   do i = 1, zn
@@ -738,15 +738,20 @@ subroutine get_knl(k,PkL,knl)
 end subroutine get_knl
 
 
-subroutine get_neff(k,kl,plin,n)
+subroutine get_neff(k,kl,plin,n,model)
 ! compute neff(k) at k=l/chi
   implicit none
+  character(*), intent(in) :: model
   double precision, intent(in) :: k(:), kl(:,:), plin(:,:)
   double precision, intent(out) :: n(:,:)
-  integer :: i, l, id, zn, ln
+  integer :: i, l, id, zn, ln, lh, h, l0, l1
+  double precision :: v
+  double precision, allocatable :: ki(:), ni(:), y(:), x(:), y2(:)
 
   zn = size(kl,dim=1)
   ln = size(kl,dim=2)
+
+  allocate(ki(ln),ni(ln)); ki=0d0; ni=0d0
 
   do i = 1, zn
     do l = 2, ln
@@ -754,9 +759,46 @@ subroutine get_neff(k,kl,plin,n)
       id     = neighb(kl(i,l),k)
       ! linear interpolation
       n(i,l) = (plin(i,id+1)-plin(i,id-1))/plin(i,id) * k(id)/(k(id+1)-k(id-1))
-     end do
+    end do
+    if (i==zn/10) call savetxt('test.dat',kl(i,:),n(i,:),ow=.true.)
+    if (model=='GM') then !smoothed n_eff
+      l0 = neighb(2d-2,kl(i,:)) !ell at BAO kmin
+      l1 = neighb(4d-1,kl(i,:)) !ell at BAO kmax
+      !find local maxima/minima
+      lh = 0
+      h  = -1
+      v  = n(i,l0)
+      do l = l0, l1
+        if (h*n(i,l)>=h*v) then
+          v  = n(i,l)
+        else
+          lh = lh + 1
+          ki(lh) = kl(i,l)
+          ni(lh) = n(i,l)
+          h  = -h
+        end if
+      end do
+      if (lh<2)  cycle
+      !interpolation points
+      allocate(y(lh+1),x(lh+1),y2(lh+1))
+      x(1)    = kl(i,l0)
+      y(1)    = n(i,l0)
+      x(2:lh) = (ki(2:lh)+ki(1:lh-1))*0.5d0
+      y(2:lh) = (ni(2:lh)+ni(1:lh-1))*0.5d0
+      x(lh+1) = kl(i,l1)
+      y(lh+1) = n(i,l1)
+      call spline(x,y,lh+1,0d0,0d0,y2)
+      !smoothing
+      do l = l0, l1
+        n(i,l) = splint(kl(i,l),x,y,y2)
+      end do
+      deallocate(x,y,y2)
+      if (i==zn/10) call savetxt('test2.dat',kl(i,:),n(i,:),ow=.true.)
+    end if
   end do
  
+  deallocate(ki,ni,y,x)
+
 end subroutine get_neff
 
 
