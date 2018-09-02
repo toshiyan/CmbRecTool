@@ -760,7 +760,7 @@ subroutine get_neff(k,kl,plin,n,model)
       ! linear interpolation
       n(i,l) = (plin(i,id+1)-plin(i,id-1))/plin(i,id) * k(id)/(k(id+1)-k(id-1))
     end do
-    if (i==zn/10) call savetxt('test.dat',kl(i,:),n(i,:),ow=.true.)
+    !if (i==zn/10) call savetxt('test.dat',kl(i,:),n(i,:),ow=.true.)
     if (model=='GM') then !smoothed n_eff
       l0 = neighb(2d-2,kl(i,:)) !ell at BAO kmin
       l1 = neighb(4d-1,kl(i,:)) !ell at BAO kmax
@@ -793,11 +793,11 @@ subroutine get_neff(k,kl,plin,n,model)
         n(i,l) = splint(kl(i,l),x,y,y2)
       end do
       deallocate(x,y,y2)
-      if (i==zn/10) call savetxt('test2.dat',kl(i,:),n(i,:),ow=.true.)
+      !if (i==zn/10) call savetxt('test2.dat',kl(i,:),n(i,:),ow=.true.)
     end if
   end do
  
-  deallocate(ki,ni,y,x)
+  deallocate(ki,ni)
 
 end subroutine get_neff
 
