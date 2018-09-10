@@ -96,13 +96,15 @@ subroutine bispec_sque(eL,sL,bst,alm,bispec)
   complex(dlc), intent(in), dimension(0:eL(2),0:eL(2)) :: alm
   double precision, intent(out) :: bispec
   !internal
-  integer :: l, nside
+  integer :: l, nside, lmax
   double precision, allocatable :: kmap(:,:)
   complex(dlc), allocatable :: klm(:,:,:)
 
-  nside = eL(2)*bst
+  lmax = max(eL(2),sL(2))
 
-  allocate(kmap(0:12*nside**2-1,2),klm(2,0:eL(2),0:eL(2)))
+  nside = lmax*bst
+
+  allocate(kmap(0:12*nside**2-1,2),klm(2,0:lmax,0:lmax))
 
   klm = 0d0
   do l = sL(1), sL(2) !ell filtering
@@ -112,8 +114,8 @@ subroutine bispec_sque(eL,sL,bst,alm,bispec)
     klm(2,l,0:l) = alm(l,0:l)
   end do
 
-  call alm2map(nside,eL(2),eL(2),klm(1:1,:,:),kmap(:,1))
-  call alm2map(nside,eL(2),eL(2),klm(2:2,:,:),kmap(:,2))
+  call alm2map(nside,lmax,lmax,klm(1:1,:,:),kmap(:,1))
+  call alm2map(nside,lmax,lmax,klm(2:2,:,:),kmap(:,2))
   bispec = sum(kmap(:,1)*kmap(:,2)**2) * (4d0*pi)/(12d0*dble(nside)**2)
 
   deallocate(kmap,klm)
