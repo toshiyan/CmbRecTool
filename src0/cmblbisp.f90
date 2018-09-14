@@ -472,6 +472,7 @@ function rebisp_fbin(eL1,eL2,eL3,zn,k,Pk,fac,abc,wp,ck,btype)  result(f)
   do l1 = eL1(1), eL1(2)
     do l2 = eL2(1), eL2(2)
       do l3 = eL3(1), eL3(2)
+
         if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
         if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
         if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
@@ -486,6 +487,7 @@ function rebisp_fbin(eL1,eL2,eL3,zn,k,Pk,fac,abc,wp,ck,btype)  result(f)
           end do
         end if
         if (btype=='pb') call bisp_postborn(l1,l2,l3,wp,ck,bisp)
+
         !normalization
         hlll = W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
         norm = norm + hlll**2
