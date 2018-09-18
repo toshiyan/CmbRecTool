@@ -825,12 +825,13 @@ subroutine precompute_postborn(dchi,chi,chis,wlf,kl,pl,wp,ck)
     do j = 1, zn
       if (chi(i)<=chi(j)) f(i,j) = wlf(i)*(chi(j)-chi(i))/(chi(j))*chi(i)
     end do
-    wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * dchi(i) * ((chis-chi(i))/(chis*chi(i)**2))**2
+    !wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * dchi(i) * ((chis-chi(i))/(chis*chi(i)**2))**2
+    wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * ((chis-chi(i))/(chis*chi(i)**2))**2
   end do
 
   do j = 1, zn
     do l = 2, ln
-      ck(j,l) = sum(Pl(:,l)*dchi*(wl/chi)*(f(:,j)/chi))
+      ck(j,l) = sum(pl(:,l)*dchi*(wl/chi)*(f(:,j)/chi))
     end do
   end do
 
