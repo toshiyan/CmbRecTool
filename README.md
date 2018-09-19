@@ -1,7 +1,9 @@
 # CmbRecTool
 
-This Library contains Fortran90 subroutines to reconstruct lensing potential and cosmic polarization rotation 
+This Library contains Fortran90 subroutines to reconstruct lensing potential, 
+polarization angle rotation, and patchy reionization 
 from cosmic microwave background anisotropies (CMB). 
+The Library also includes subrotuines for delensing, bi-spectrum calculation, and so on.
 
 # Install
 
@@ -13,10 +15,11 @@ from cosmic microwave background anisotropies (CMB).
   
   3) You will find the Library at "lib" and "mod" directories. 
 
+  4) To use example codes, you also need "pylib/makefile.py" to create a Makefile. 
 
 # Test
 
-You can test the library by using the example codes at "example" directory. At each subdirectory, you need to compile each code 
+You can test the library by using the example codes at "examples" directory. At each subdirectory, you need to compile each code 
 by just typying "make" (you do need to edit each Makefile). Then you can run each code by "./exe" or "./exe params.ini" where exe is 
 an executable file. 
 
@@ -30,7 +33,7 @@ In flat sky analysis, verification of the source code is shown in
   - https://arxiv.org/abs/1612.07855 for the cosmic polarization rotation, 
   - https://arxiv.org/abs/1703.00169 for the delensing
 
-In full sky analysis, the library also support the subroutines for the lensing reconstruction and delensing as shown in 
+For full sky analysis, the library also supports the subroutines for the lensing reconstruction and delensing as shown in 
 
   - https://arxiv.org/abs/1405.6568
   
@@ -44,5 +47,5 @@ The library software uses the following public codes: FFTW, HEALPix, LAPACK, CFI
 
 # Contact
 
-  toshiyan at stanford.edu
+  namikawa at slac.stanford.edu
 

@@ -542,7 +542,7 @@ subroutine blm2map_spin(nside,lmax,mmax,spin,Blm,map)
 end subroutine blm2map_spin
 
 
-subroutine PURE_EB_ESTIMATOR(nside,npix,lmax,Pobs,W0)
+subroutine pureEB_full(nside,npix,lmax,Pobs,W0)
   implicit none
   !I/O
   integer, intent(in) :: nside, npix, lmax
@@ -608,7 +608,7 @@ subroutine PURE_EB_ESTIMATOR(nside,npix,lmax,Pobs,W0)
   ! total
   Pobs = Pobs + P1
 
-end subroutine PURE_EB_ESTIMATOR
+end subroutine pureEB_full
 
 
 subroutine CHI_FIELD(nside,npix,lmax,Pobs,W0)

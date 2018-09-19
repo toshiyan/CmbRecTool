@@ -812,28 +812,31 @@ subroutine precompute_postborn(dchi,chi,chis,wlf,kl,pl,wp,ck)
   double precision, intent(out) :: wp(:,:), ck(:,:)
   !internal
   integer :: i, j, l, zn, ln
-  double precision, allocatable :: wl(:), f(:,:)
+  double precision, allocatable :: fchi1(:), fchi2(:,:)
 
   zn = size(kl,dim=1)
   ln = size(kl,dim=2)
 
-  allocate(wl(zn),f(zn,zn)); wl=0d0; f=0d0
+  allocate(fchi1(zn),fchi2(zn,zn)); fchi1=0d0; fchi2=0d0
 
-  wl = wlf*(chis-chi)*chi/chis
+  fchi1 = (chis-chi)/(chi*chis)
 
   do i = 1, zn
     do j = 1, zn
-      if (chi(i)<=chi(j)) f(i,j) = wlf(i)*(chi(j)-chi(i))/(chi(j))*chi(i)
+      if (chi(i)<=chi(j)) fchi2(i,j) = (chi(j)-chi(i))/(chi(j)*chi(i))
     end do
-    !wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * dchi(i) * ((chis-chi(i))/(chis*chi(i)**2))**2
-    wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * ((chis-chi(i))/(chis*chi(i)**2))**2
+    wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * dchi(i) * ((chis-chi(i))/(chis*chi(i)**2))**2
+    !wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * ((chis-chi(i))/(chis*chi(i)**2))**2
   end do
 
   do j = 1, zn
     do l = 2, ln
-      ck(j,l) = sum(pl(:,l)*dchi*(wl/chi)*(f(:,j)/chi))
+      !ck(j,l) = sum(pl(:,l)*dchi*(wl/chi)*(f(:,j)/chi))
+      ck(j,l) = dble(l)**4*sum(pl(:,l)*(wlf/kl(:,l)**2)**2*(dchi/chi**2)*fchi1*fchi2(:,j))
     end do
   end do
+
+  deallocate(fchi1,fchi2)
 
 end subroutine precompute_postborn
 
