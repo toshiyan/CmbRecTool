@@ -1,13 +1,14 @@
 ! example of fullsky lensing reconstruction
 
 program main
-  use readfile,   only: set_params_file, read_prm, read_str, read_int, read_dbl
-  use myutils,    only: str, linspace, savetxt, loadtxt, save_average
-  use io,         only: loadfile
-  use myconst,    only: dlc, pi
-  use mycls,      only: alm2bcl, binned_ells
-  use nldd_lens,  only: AlTT, AlEB
-  use recfull,    only: quadtt, quadeb
+  use readfile,  only: set_params_file, read_prm, read_str, read_int, read_dbl
+  use myutils,   only: str, linspace, savetxt, loadtxt, save_average
+  use io,        only: loadfile
+  use myconst,   only: dlc, pi
+  use mycls,     only: alm2bcl, binned_ells
+  use nldd_lens, only: AlTT, AlEB
+  use anafull,   only: gaussianTEB
+  use recfull,   only: quadtt, quadeb
   implicit none
   integer :: i, l, bn, nside, rL(2), eL(2), sn(2)
   double precision, allocatable :: bc(:), ll(:), Fl(:,:,:), cl(:,:), cpp(:,:,:), Al(:,:,:)
@@ -26,7 +27,7 @@ program main
   ll = linspace(1,eL(2))
   call binned_ells(eL,bc=bc) !binned multipole
 
-  ! read CMB cl
+  ! read CMB cl (change here to read your cl)
   allocate(cl(4,eL(2))); cl=0d0
   call loadtxt('../../dat/lensedfid_P15.dat',cl(1,2:),cl(2,2:),cl(3,2:),cl(4,2:),rows=[1,eL(2)-1],usecols=[2,3,4,5])
   cl(1,:) = cl(1,:) * 2d0*pi/(ll**2+ll) ! factor out
@@ -43,15 +44,16 @@ program main
   !call AlEB(rL,eL,Al(2,1,:),Al(2,2,:),cl(2,:),cl(2,:),cl(3,:))
   !call savetxt('Al.dat',ll,Al(1,:))
 
-
   ! calculate estimator
   allocate(alm(3,0:eL(2),0:eL(2)),glm(2,0:eL(2),0:eL(2)),clm(2,0:eL(2),0:eL(2)),cpp(sn(1):sn(2),2,bn))
 
-  do i = sn(1), sn(2) ! iterate for real + MC realizations
+  do i = sn(1), sn(2) ! iterate for realizations
 
     !//// you need some input alm and read it here ////!
-    ! read alm
-    call loadfile('alm_r'//str(i)//'.dat',alm) !change this line to read your data appropriately
+    ! 1) read alm
+    !call loadfile('alm_r'//str(i)//'.dat',alm) !change this line to read your data appropriately
+    ! 2) or generate random gaussian alms
+    call gaussianTEB(alm,cl(1,:),cl(2,:),cl(3,:),cl(4,:),eL(2))
 
     ! inverse variance filtering
     alm = alm*Fl
