@@ -282,7 +282,8 @@ subroutine bisp_equi(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,lambda,kappa)
 
   do l = eL(1), eL(2)
     bisp = 0d0
-    if (b=='pb')  bisp = 3d0*dble(l)**4*sum(wp(:,l)*ck(:,l))
+    !if (b=='pb')  bisp = 3d0*dble(l)**4*sum(wp(:,l)*ck(:,l))
+    if (b=='pb') call bisp_postborn(l,l,l,wp,ck,bisp)
     if (b=='LSS') then 
       do i = 1, zn
         call F2_Kernel([k(i,l),k(i,l),k(i,l)],abc(:,i,l),abc(:,i,l),F2,lam(i),kap(i))
@@ -323,7 +324,7 @@ subroutine bisp_fold(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,lambda,kappa)
 
   do l = eL(1), eL(2)
     bisp = 0d0
-    if (b=='pb')  bisp = - 8d0*dble(l)**4*sum(wp(:,l)*ck(:,l)) - 4d0*(dble(l)**4*sum(wp(:,l)*ck(:,2*l))-dble(2*l)**4*sum(wp(:,2*l)*ck(:,l)))
+    if (b=='pb') call bisp_postborn(2*l,l,l,wp,ck,bisp)
     if (b=='LSS') then 
       do i = 1, zn
         call F2_Kernel([k(i,l),k(i,l),k(i,2*l)],abc(:,i,l),abc(:,i,l),F2(1),lam(i),kap(i))
@@ -826,12 +827,10 @@ subroutine precompute_postborn(dchi,chi,chis,wlf,kl,pl,wp,ck)
       if (chi(i)<=chi(j)) fchi2(i,j) = (chi(j)-chi(i))/(chi(j)*chi(i))
     end do
     wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * dchi(i) * ((chis-chi(i))/(chis*chi(i)**2))**2
-    !wp(i,:) = pl(i,:) * ( wlf(i)/kl(i,:)**2 )**2 * ((chis-chi(i))/(chis*chi(i)**2))**2
   end do
 
   do j = 1, zn
     do l = 2, ln
-      !ck(j,l) = sum(pl(:,l)*dchi*(wl/chi)*(f(:,j)/chi))
       ck(j,l) = dble(l)**4*sum(pl(:,l)*(wlf/kl(:,l)**2)**2*(dchi/chi**2)*fchi1*fchi2(:,j))
     end do
   end do
