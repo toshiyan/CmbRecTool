@@ -646,26 +646,31 @@ subroutine calccl_dpc(cl,iL,alm1,alm2,f,norm)
 end subroutine calccl_dpc
 
 
-subroutine alm2bcl_full(bmax,iL,alm1,alm2,bc,Cb,oL)
+subroutine alm2bcl_full(bmax,iL,alm1,alm2,bc,Cb,oL,norm)
   implicit none
   integer, intent(in) :: bmax, iL(2)
   complex(dlc), intent(in), dimension(0:iL(2),0:iL(2)) :: alm1
 !(optional)
   integer, intent(in), optional :: oL(2)
+  double precision, intent(in), optional :: norm
   complex(dlc), intent(in), dimension(0:iL(2),0:iL(2)), optional :: alm2
   double precision, intent(out), optional :: bc(:), Cb(:)
   !internal
   integer :: npix, eL(2)
+  double precision :: n
   double precision, allocatable :: Cl(:), bp(:), bc0(:)
 
   eL = iL
   if (present(oL)) eL=oL
 
+  n = 1d0
+  if (present(norm)) n = norm
+
   allocate(Cl(eL(2)))
   if (present(alm2)) then
-    call calccl_dpc(cl,iL,alm1,alm2)
+    call calccl_dpc(cl,iL,alm1,alm2,norm=n)
   else
-    call calccl_dpc(cl,iL,alm1)
+    call calccl_dpc(cl,iL,alm1,norm=n)
   end if
 
   allocate(bp(bmax+1),bc0(bmax))
