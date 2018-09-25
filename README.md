@@ -1,21 +1,19 @@
 # CmbRecTool
 
-This Library contains Fortran90 subroutines to reconstruct lensing potential, 
-polarization angle rotation, and patchy reionization 
-from cosmic microwave background anisotropies (CMB). 
-The Library also includes subrotuines for delensing, bi-spectrum calculation, and so on.
+This Library contains Fortran90 subroutines to reconstruct lensing potential, cosmic birefrimgence, and patchy reionization 
+from cosmic microwave background anisotropies (CMB). The Library also includes subrotuines for delensing, bi-spectrum calculation, and so on.
 
 # Install
 
   0) The code assumes "ifort" (intel fortran compiler) as a fortran compiler. 
 
-  1) Go to "pub" directory, and install each pubclic package (FFTW, Healpix, LAPACK and cfitsio). 
+  1) Go to "pub" directory, and install each pubclic package (FFTW, Healpix, LAPACK and cfitsio). The clibrary utilizes static links to those packages.
 
-  2) Go to the top directory, and type "./MALEALL install". 
+  2) Go to the top directory, and type "./MALEALL.sh install". 
   
   3) You will find the Library at "lib" and "mod" directories. 
 
-  4) To use example codes, you also need "pylib/makefile.py" to create a Makefile. 
+  4) To use some example codes, you also need "pylib/makefile.py" to create a Makefile if no Makefle exists. 
 
 # Test
 
@@ -36,7 +34,6 @@ In flat sky analysis, verification of the source code is shown in
 For full sky analysis, the library also supports the subroutines for the lensing reconstruction and delensing as shown in 
 
   - https://arxiv.org/abs/1405.6568
-  
 
 The algorithm written in nldd/xxx.f90 is described in doc/note.pdf
 
