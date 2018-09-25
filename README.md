@@ -1,7 +1,7 @@
 # CmbRecTool
 
 This Library contains Fortran90 subroutines to reconstruct lensing potential, cosmic birefrimgence, and patchy reionization 
-from cosmic microwave background anisotropies (CMB). The Library also includes subrotuines for delensing, bi-spectrum calculation, and so on.
+from cosmic microwave background anisotropies (CMB). The Library also includes subrotuines for delensing, bi-spectrum calculation, and so on. Installing this library at NERSC is straightforward, but the library also works at other environment. 
 
 # Install
 
