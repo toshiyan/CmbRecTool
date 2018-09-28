@@ -409,6 +409,17 @@ subroutine ifexist_chorg(fname)
 end subroutine ifexist_chorg
 
 
+subroutine ifexist_rmorg(fname)
+  implicit none
+  character(*), intent(in) :: fname
+  logical :: fexist
+
+  inquire(file=trim(fname),exist=fexist)
+  if (fexist)  call system('rm -rf '//trim(fname)//' '//trim(fname)//'.tmp')
+
+end subroutine ifexist_rmorg
+
+
 function fexist(fname)  result(f)
   implicit none
   character(*), intent(in) :: fname
