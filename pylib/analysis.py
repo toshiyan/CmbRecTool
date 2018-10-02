@@ -69,7 +69,7 @@ class statistics:
     print amp.ndim
     cov = np.cov(amp,rowvar=0)
     cov[np.isnan(cov)] = 0.
-    wb = np.sum(icov,axis=0)
+    wb = np.sum(np.linalg.inv(cov),axis=0)
     wt = np.sum(wb)
 
     # amplitude estimator
@@ -79,7 +79,7 @@ class statistics:
 
     # observed amplitude
     oA = np.sum(wb*self.ocl/fcl)/wt
-    print 'obs amp', oA, 'sig amp', sA, 'ratio', oA/sA
+    print 'obs/sim amp', oA, mA, 'sigma amp', sA, 'ratio', oA/sA
 
     self.A  = A
     self.mA = mA
