@@ -66,7 +66,6 @@ class statistics:
     amp = self.scl/fcl
 
     # covariance
-    print amp.ndim
     cov = np.cov(amp,rowvar=0)
     cov[np.isnan(cov)] = 0.
     wb = np.sum(np.linalg.inv(cov),axis=0)
