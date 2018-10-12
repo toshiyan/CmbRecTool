@@ -78,7 +78,7 @@ class statistics:
 
     # observed amplitude
     oA = np.sum(wb*self.ocl/fcl)/wt
-    print 'obs/sim amp', oA, mA, 'sigma amp', sA, 'ratio', oA/sA
+    #print 'obs/sim amp', oA, mA, 'sigma amp', sA, 'ratio', oA/sA
 
     self.A  = A
     self.mA = mA
