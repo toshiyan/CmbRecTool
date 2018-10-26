@@ -55,6 +55,7 @@ class statistics:
     self.px1 = (sX1>oX1).sum()/np.float(n)
     self.ox1 = oX1
     self.sx1 = sX1
+    #print np.std(sX1), oX1-np.mean(sX1)
 
 
   def get_amp(self,fcl='',scale=1.):
