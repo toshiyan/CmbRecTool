@@ -10,8 +10,8 @@ program main
   use anafull,   only: gaussianTEB
   use recfull,   only: quadtt, quadeb
   implicit none
-  integer :: i, l, bn, nside, rL(2), eL(2), sn(2)
-  double precision, allocatable :: bc(:), ll(:), Fl(:,:,:), cl(:,:), cpp(:,:,:), Al(:,:,:)
+  integer :: i, e, l, bn, nside, rL(2), eL(2), sn(2)
+  double precision, allocatable :: bc(:), ll(:), Fl(:,:,:), cl(:,:), cnl(:,:), cpp(:,:,:), Al(:,:,:)
   complex(dlc), allocatable :: alm(:,:,:), glm(:,:,:), clm(:,:,:)
 
   ! read parameters from params.ini
@@ -28,21 +28,28 @@ program main
   call binned_ells(eL,bc=bc) !binned multipole
 
   ! read CMB cl (change here to read your cl)
-  allocate(cl(4,eL(2))); cl=0d0
+  allocate(cl(4,eL(2)),cnl(4,eL(2))); cl=0d0; cnl=0d0
   call loadtxt('../../dat/lensedfid_P15.dat',cl(1,2:),cl(2,2:),cl(3,2:),cl(4,2:),rows=[1,eL(2)-1],usecols=[2,3,4,5])
-  cl(1,:) = cl(1,:) * 2d0*pi/(ll**2+ll) ! factor out
+  do i = 1, 4
+    cl(i,:) = cl(i,:) * 2d0*pi/(ll**2+ll) ! factor out
+  end do
+
+  ! read or define "measured" cl
+  cnl = cl ! here no instrumental effects are included
 
   ! set filtering function
   allocate(Fl(3,0:eL(2),0:eL(2))); Fl=0d0
-  do l = 2, eL(2)
-    Fl(1,l,0:l) = 1d0/cl(1,l) !noise not included
+  do i = 1, 3
+    do l = 2, eL(2)
+      Fl(i,l,0:l) = 1d0/cnl(i,l)
+    end do
   end do
 
   ! compute normalization
   allocate(Al(2,2,eL(2)))
-  call AlTT(rL,eL,Al(1,1,:),Al(1,2,:),cl(1,:),cl(1,:)) !noise not included
-  !call AlEB(rL,eL,Al(2,1,:),Al(2,2,:),cl(2,:),cl(2,:),cl(3,:))
-  !call savetxt('Al.dat',ll,Al(1,:))
+  call AlTT(rL,eL,Al(1,1,:),Al(1,2,:),cl(1,:),cnl(1,:))
+  call AlEB(rL,eL,Al(2,1,:),Al(2,2,:),cl(2,:),cnl(2,:),cnl(3,:))
+  !call savetxt('Al.dat',ll,Al(1,1,:),Al(2,1,:),ow=.true.) !output normalization if needed
 
   ! calculate estimator
   allocate(alm(3,0:eL(2),0:eL(2)),glm(2,0:eL(2),0:eL(2)),clm(2,0:eL(2),0:eL(2)),cpp(sn(1):sn(2),2,bn))
@@ -60,26 +67,27 @@ program main
 
     ! compute unnormalized quadratic estimator
     call quadtt(nside,alm(1,0:rL(2),0:rL(2)),alm(1,0:rL(2),0:rL(2)),cl(1,:),eL,rL,glm(1,:,:),clm(1,:,:))
-    !call quadeb(nside,alm(2,0:rL(2),0:rL(2)),alm(3,0:rL(2),0:rL(2)),cl(2,:),eL,rL,glm(2,:,:),clm(2,:,:))
+    call quadeb(nside,alm(2,0:rL(2),0:rL(2)),alm(3,0:rL(2),0:rL(2)),cl(2,:),eL,rL,glm(2,:,:),clm(2,:,:))
 
     ! correct normalization
-    do l = 2, eL(2)
-      glm(1,l,0:l) = glm(1,l,0:l)*Al(1,1,l)
-      clm(1,l,0:l) = clm(1,l,0:l)*Al(1,2,l)
+    do e = 1, 2
+      do l = 2, eL(2)
+        glm(e,l,0:l) = glm(e,l,0:l)*Al(e,1,l)
+        clm(e,l,0:l) = clm(e,l,0:l)*Al(e,2,l)
+      end do
+      ! compute binned power of the estimators
+      call alm2bcl(bn,eL,glm(e,:,:),cb=cpp(i,e,:),oL=eL)
     end do
 
-    ! compute binned power of the phi estimator
-    call alm2bcl(bn,eL,glm(1,:,:),cb=cpp(i,1,:),oL=eL)
-
     ! save to file
-    call savetxt('cpp_r'//str(i)//'.dat',bc,cpp(i,1,:),ow=.true.)
+    call savetxt('cpp_r'//str(i)//'.dat',bc,cpp(i,1,:),cpp(i,2,:),ow=.true.)
 
   end do
 
   ! output average of cl over realizations
   call save_average('cpp.dat',cpp,id=[2,3],bc=bc)
 
-  deallocate(alm,glm,clm,Fl,cl,ll,cpp,Al,bc)
+  deallocate(alm,glm,clm,Fl,cl,cnl,ll,cpp,Al,bc)
 
 end program main
 
