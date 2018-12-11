@@ -17,7 +17,7 @@ subroutine LensingB(nside,WElm,Wglm,lBlm,eL,gL,bL)
   !I/O
   integer, intent(in) :: eL(2), gL(2), bL(2), nside
   complex(dlc), intent(in), dimension(0:eL(2),0:eL(2)) :: WElm
-  complex(dlc), intent(in), dimension(0:gL(2),0:gL(2)) :: Wglm
+  complex(dlc), intent(in), dimension(0:gL(2),0:gL(2)) :: Wglm !wiener filtered phi alm
   complex(dlc), intent(out), dimension(0:bL(2),0:bL(2)) :: lBlm
   !internal
   integer :: l, m, npix
