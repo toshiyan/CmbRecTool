@@ -23,14 +23,16 @@ class statistics:
     self.onlydiag = False
 
 
-  def x2PTE(self):
+  def x2PTE(self,simamp=1,diag=False):
     # compute chi^2 PTE of ocl using scl
+    # simamp /=1 if needed
     n   = len(self.scl[:,0])
     # for real data
     mx  = np.mean(self.scl,axis=0)
     dxi = self.scl - mx
-    dx0 = self.ocl - mx
+    dx0 = self.ocl - mx*simamp
     cov = np.cov(dxi,rowvar=0)
+    if diag: cov = np.diag(np.diag(cov))
     oX2 = np.dot(dx0,np.dot(np.linalg.inv(cov),dx0))
     # for sim (exclude self rlz)
     dxi = np.array([self.scl[i,:]-np.mean(np.delete(self.scl,i,0),axis=0) for i in range(n)])
@@ -41,13 +43,13 @@ class statistics:
     self.sx2 = sX2
 
 
-  def x1PTE(self):
+  def x1PTE(self,simamp=1):
     # compute chi PTE of ocl using scl
     n   = len(self.scl[:,0])
     # for real data
     mx  = np.mean(self.scl,axis=0)
     sx  = np.std(self.scl,axis=0)
-    oX1 = np.sum((self.ocl-mx)/sx)
+    oX1 = np.sum((self.ocl-mx*simamp)/sx)
     # for sim (exclude self rlz)
     dxi = np.array([self.scl[i,:]-np.mean(np.delete(self.scl,i,0),axis=0) for i in range(n)])
     sX1 = np.array([np.sum(dxi[i,:]/np.std(np.delete(self.scl,i,0),axis=0)) for i in range(n)])
@@ -58,7 +60,7 @@ class statistics:
     #print np.std(sX1), oX1-np.mean(sX1)
 
 
-  def get_amp(self,fcl='',scale=1.):
+  def get_amp(self,fcl='',scale=1.,diag=False):
     # estimate the amplitude of the power spectrum
     #   fcl --- fiducial cl used to define amplitude array like [bin]
 
@@ -69,6 +71,7 @@ class statistics:
     # covariance
     cov = np.cov(amp,rowvar=0)
     cov[np.isnan(cov)] = 0.
+    if diag: cov = np.diag(np.diag(cov))
     wb = np.sum(np.linalg.inv(cov),axis=0)
     wt = np.sum(wb)
 

@@ -840,6 +840,88 @@ subroutine alflat_eb(nn,D,fE,fB,CE,rL,eL,Alg,Alc)
 end subroutine alflat_eb
 
 
+! asymmetric case
+subroutine alflat_tt_asym(nn,D,OC1,OC2,CT,rL,eL,Alg,Alc)
+  implicit none
+  !I/O
+  integer, intent(in) :: nn(1:2), el(1:2), rL(1:2)
+  double precision, intent(in) :: CT(:), OC1(:), OC2(:), D(1:2)
+  double precision, intent(out), optional :: Alg(:), Alc(:)
+! [internal]
+  integer :: i, n, npix
+  double precision :: ll(2,nn(1)*nn(2)), els(nn(1)*nn(2)), iAlg, iAlc
+  complex(dlc), allocatable :: Al(:,:), Bl(:,:), A1(:,:), A2(:,:), B1(:,:), B2(:,:)
+
+  write(*,*) 'TT flat'
+
+  npix = nn(1)*nn(2)
+  allocate(A1(4,npix),A2(4,npix),B1(2,npix),B2(2,npix)); A1=0d0; A2=0d0; B1=0d0; B2=0d0
+  call elarrays(nn,D,elx=ll(1,:),ely=ll(2,:),els=els)
+
+  if (size(CT)/=npix)  stop 'error (alflat_tt): size of TT is not npix.'
+
+  !* for convolution
+  do n = 1, npix
+    if(rL(1)>els(n).or.els(n)>rL(2)) cycle
+    A1(1,n) = OC1(n) * CT(n)**2 * ll(1,n)**2
+    A1(2,n) = OC1(n) * CT(n)**2 * 2d0*ll(1,n)*ll(2,n)
+    A1(3,n) = OC1(n) * CT(n)**2 * ll(2,n)**2
+    A1(4,n) = OC2(n)
+    A2(1,n) = OC2(n) * CT(n)**2 * ll(1,n)**2
+    A2(2,n) = OC2(n) * CT(n)**2 * 2d0*ll(1,n)*ll(2,n)
+    A2(3,n) = OC2(n) * CT(n)**2 * ll(2,n)**2
+    A2(4,n) = OC1(n)
+    B1(1:2,n) = ll(1:2,n) * CT(n) * OC1(n)
+    B2(1:2,n) = ll(1:2,n) * CT(n) * OC2(n)
+  end do
+
+  !* convolution
+  call dft(A1(4,:),nn,D,-1)
+  call dft(A2(4,:),nn,D,-1)
+  allocate(Al(6,npix))
+  do i = 1, 3
+    call dft(A1(i,:),nn,D,-1)
+    Al(i,:) = A1(4,:)*A1(i,:)
+    call dft(Al(i,:),nn,D,1)
+    call dft(A2(i,:),nn,D,-1)
+    Al(i+3,:) = A2(4,:)*A2(i,:)
+    call dft(Al(i+3,:),nn,D,1)
+  end do
+  deallocate(A1,A2)
+
+  do i = 1, 2
+    call dft(B1(i,:),nn,D,-1)
+    call dft(B2(i,:),nn,D,-1)
+  end do
+  allocate(Bl(4,npix))
+  do i = 1, 4
+    if (i<=2) Bl(i,:) = B1(i,:)*B2(i,:)
+    if (i==3) Bl(i,:) = B1(1,:)*B2(2,:)
+    if (i==4) Bl(i,:) = B1(2,:)*B2(1,:)
+    call dft(Bl(i,:),nn,D,1)
+  end do
+  deallocate(B1,B2)
+
+  !* normalization
+  do n = 1, npix
+    if(els(n)<eL(1).or.els(n)>eL(2))  cycle
+    if (present(Alg)) then
+      iAlg = (ll(1,n)**2*(Al(1,n)+Al(4,n)) + ll(1,n)*ll(2,n)*(Al(2,n)+Al(5,n)) + ll(2,n)**2*(Al(3,n)+Al(6,n)))*0.5d0 &
+        + ll(1,n)**2*Bl(1,n) + ll(2,n)**2*Bl(2,n) + ll(1,n)*ll(2,n)*sum(Bl(3:4,n))
+      if(iAlg>0d0) Alg(n) = 1d0/iAlg
+    end if
+    if (present(Alc)) then
+      iAlc = (ll(2,n)**2*(Al(1,n)+Al(4,n)) - ll(1,n)*ll(2,n)*(Al(2,n)+Al(5,n)) + ll(1,n)**2*(Al(3,n)+Al(6,n)))*0.5d0 &
+        + ll(2,n)**2*Bl(1,n) + ll(1,n)**2*Bl(2,n) - ll(1,n)*ll(2,n)*sum(Bl(3:4,n))
+      if(iAlc>0d0) Alc(n) = 1d0/iAlc
+    end if
+  end do
+
+  deallocate(Al)
+
+end subroutine alflat_tt_asym
+
+
 #ifdef useold
 
 subroutine EST_BHE(est,AL,els,eL) 
