@@ -141,6 +141,17 @@ class statistics:
 
 
 #////////// data analysis functions //////////#
+def quickplot_hist(dat,obs='',bins=20,label='',histtype='step',density=True):
+  import matplotlib.pyplot as plt
+  plt.xlim(min(dat),max(dat))
+  plt.hist(dat,bins,histtype=histtype,label=label,density=density)
+  x   = np.arange(min(dat),max(dat),(max(dat)-min(dat))/100.)
+  mu  = np.mean(dat)
+  sig = np.std(dat)
+  plt.plot(x,np.exp(-(x-mu)**2/2./sig**2)/np.sqrt(2*np.pi*sig**2))
+  if obs!='': plt.axvline(obs)
+  plt.legend(loc=0,frameon=False)
+
 
 def apofunc(distance,aposcale):
   # apodization window
