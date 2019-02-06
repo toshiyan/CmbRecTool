@@ -1404,6 +1404,7 @@ end function ave_2d
 
 
 subroutine save_average_2d(f,dat,id,bc)
+!average 2d quantities along an axis (1st index for default), compute its mean and variance, and save to a file
   implicit none
   !I/O
   character(*), intent(in) :: f
@@ -1413,8 +1414,7 @@ subroutine save_average_2d(f,dat,id,bc)
   double precision, intent(in), optional :: bc(:)
   !internal
   integer :: ndat, bmax, j
-  double precision :: b(1,size(bc))
-  double precision, allocatable :: mdat(:,:), vdat(:,:)
+  double precision, allocatable :: b(:,:), mdat(:,:), vdat(:,:)
 
   if (present(id)) then
     ndat = size(dat,dim=id(1))
@@ -1424,7 +1424,7 @@ subroutine save_average_2d(f,dat,id,bc)
     bmax = size(dat,dim=3)
   end if
 
-  allocate(mdat(ndat,bmax),vdat(ndat,bmax)); mdat=0d0; vdat=0d0
+  allocate(mdat(ndat,bmax),vdat(ndat,bmax),b(1,bmax)); mdat=0d0; vdat=0d0
   do j = 1, ndat
     call meanvar(dat(:,j,:),mdat(j,:),vdat(j,:))
   end do
@@ -1434,6 +1434,7 @@ subroutine save_average_2d(f,dat,id,bc)
     b(1,:) = bc
     call savetxt(f,b,mdat,vdat,ow=.true.)
   else
+    b(1,:) = linspace(1,bmax)
     call savetxt(f,mdat,vdat,ow=.true.)
   end if
 
