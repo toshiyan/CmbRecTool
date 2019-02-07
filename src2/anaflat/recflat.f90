@@ -467,11 +467,19 @@ end subroutine quadbb
 
 subroutine alflat_tt(nn,D,OC,CT,rL,eL,Alg,Alc)
   implicit none
+
   !I/O
+  ! OC(nn(1)*nn(2)) --- inverse of observed cl in 2D
+  ! CT(nn(1)*nn(2)) --- lensed cl in 2D
   integer, intent(in) :: nn(1:2), el(1:2), rL(1:2)
   double precision, intent(in) :: CT(:), OC(:), D(1:2)
+
+  !(optional)
+  ! Alg(nn(1)*nn(2)) --- normalization (gradient)
+  ! Alc(nn(1)*nn(2)) --- normalization (curl)
   double precision, intent(out), optional :: Alg(:), Alc(:)
-! [internal]
+
+  !internal
   integer :: i, n, npix
   double precision :: ll(2,nn(1)*nn(2)), els(nn(1)*nn(2)), iAlg, iAlc
   complex(dlc) :: vec
@@ -504,7 +512,6 @@ subroutine alflat_tt(nn,D,OC,CT,rL,eL,Alg,Alc)
     call dft(A1(i,:),nn,D,-1)
     Al(i,:) = A2(1,:)*A1(i,:)
     call dft(Al(i,:),nn,D,1)
-    Al(i,:) = Al(i,:)
   end do
   deallocate(A1,A2)
 
@@ -513,12 +520,12 @@ subroutine alflat_tt(nn,D,OC,CT,rL,eL,Alg,Alc)
     call dft(B2(i,:),nn,D,-1)
   end do
   allocate(Bl(4,npix))
+  Bl(1,:) = B1(1,:)*B2(1,:)
+  Bl(2,:) = B1(2,:)*B2(2,:)
+  Bl(3,:) = B1(1,:)*B2(2,:)
+  Bl(4,:) = B1(2,:)*B2(1,:)
   do i = 1, 4
-    Bl(i,:) = B1(i,:)*B2(i,:)
-    if (i==3) Bl(i,:) = B1(1,:)*B2(2,:)
-    if (i==4) Bl(i,:) = B1(2,:)*B2(1,:)
     call dft(Bl(i,:),nn,D,1)
-    Bl(i,:) = Bl(i,:)
   end do
   deallocate(B1,B2)
 
