@@ -853,8 +853,9 @@ subroutine alflat_tt_asym(nn,D,OC1,OC2,CT,rL,eL,Alg,Alc)
   !I/O
   integer, intent(in) :: nn(1:2), el(1:2), rL(1:2)
   double precision, intent(in) :: CT(:), OC1(:), OC2(:), D(1:2)
+  !optional
   double precision, intent(out), optional :: Alg(:), Alc(:)
-! [internal]
+  !internal
   integer :: i, n, npix
   double precision :: ll(2,nn(1)*nn(2)), els(nn(1)*nn(2)), iAlg, iAlc
   complex(dlc), allocatable :: Al(:,:), Bl(:,:), A1(:,:), A2(:,:), B1(:,:), B2(:,:)
@@ -901,10 +902,10 @@ subroutine alflat_tt_asym(nn,D,OC1,OC2,CT,rL,eL,Alg,Alc)
     call dft(B2(i,:),nn,D,-1)
   end do
   allocate(Bl(4,npix))
+  Bl(1:2,:) = B1(1:2,:)*B2(1:2,:)
+  Bl(3,:)   = B1(1,:)*B2(2,:)
+  Bl(4,:)   = B1(2,:)*B2(1,:)
   do i = 1, 4
-    if (i<=2) Bl(i,:) = B1(i,:)*B2(i,:)
-    if (i==3) Bl(i,:) = B1(1,:)*B2(2,:)
-    if (i==4) Bl(i,:) = B1(2,:)*B2(1,:)
     call dft(Bl(i,:),nn,D,1)
   end do
   deallocate(B1,B2)
