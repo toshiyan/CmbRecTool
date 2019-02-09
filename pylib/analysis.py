@@ -141,16 +141,57 @@ class statistics:
 
 
 #////////// data analysis functions //////////#
-def quickplot_hist(dat,obs='',bins=20,label='',histtype='step',density=True):
+def quickplot_hist(dat,obs='',bins=20,label='',histtype='step',density=True,gpdf=True,err_type=''):
   import matplotlib.pyplot as plt
+  import inspect
+  from scipy.stats import norm
+
   plt.xlim(min(dat),max(dat))
-  plt.hist(dat,bins,histtype=histtype,label=label,density=density)
+  h0, b, p = plt.hist(dat,bins,histtype=histtype,label=label,density=density)
+
+  h1, b = np.histogram(dat,density=False)
+  h2, b = np.histogram(dat,density=True)
+  # scaling
+  if density:
+    R = 1.
+  else:
+    R = h1[0]/h2[0]
+
+  X = (b[1:]+b[:-1])/2
   x   = np.arange(min(dat),max(dat),(max(dat)-min(dat))/100.)
   mu  = np.mean(dat)
   sig = np.std(dat)
-  plt.plot(x,np.exp(-(x-mu)**2/2./sig**2)/np.sqrt(2*np.pi*sig**2))
-  if obs!='': plt.axvline(obs)
+  y   = norm.pdf(x,loc=mu,scale=sig)*R
+  Y   = norm.pdf(X,loc=mu,scale=sig)*R
+
+  # plot Gaussian PDF
+  if gpdf:
+    plt.plot(x,y)
+
+  # plot error bars of histogram
+  if err_type!='': 
+
+    if err_type=='gaussian': 
+      yerr = np.sqrt(Y)
+
+    if err_type=='hist':
+      yerr = np.sqrt(h1)
+
+    if density: yerr = yerr/R
+    plt.errorbar(X,h0,yerr=yerr,fmt='o')
+
+    # chi-square to gaussian pdf
+    chi2 = np.sqrt(np.sum((h0-Y)**2/yerr**2))
+    plt.figtext(.8,.8,'$\chi^2=$'+str(chi2)[:4])
+
+  # observed value
+  if obs!='': 
+    plt.axvline(obs)
+
+  # add legend
   plt.legend(loc=0,frameon=False)
+
+
 
 
 def hist_errorbars( data, xerrs=True, *args, **kwargs) :
@@ -170,7 +211,9 @@ def hist_errorbars( data, xerrs=True, *args, **kwargs) :
             histkwargs[key] = value
 
     histvals, binedges = np.histogram( data, **histkwargs )
-    yerrs = np.sqrt(histvals)
+    a, binedges = np.histogram( data)
+    yerrs = np.sqrt(a)*histvals[0]/a[0]
+    print yerrs, histvals
 
     if norm :
         nevents = float(sum(histvals))

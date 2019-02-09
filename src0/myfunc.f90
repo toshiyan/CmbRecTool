@@ -658,7 +658,7 @@ subroutine wint(k,plin,r,sig,d1,d2)
 end subroutine wint
 
 
-subroutine NonLinRatios(plin,z,k,cp,pnl)
+subroutine NonLinRatios(plin,z,k,cp,pnl,ftype)
 ! * This implementation uses Halofit (Taken from CAMB)
 !
 ! [inputs]
@@ -668,15 +668,23 @@ subroutine NonLinRatios(plin,z,k,cp,pnl)
 !   cp        --- cosmological parameters
   type(cosmoparams), intent(in) :: cp
   double precision, intent(in)  :: plin(:,:), z(:), k(:)
-!
+! (optional)
+  character(*), intent(in), optional :: ftype
+
 ! [outputs]
   double precision, intent(out) :: pnl(:,:)
+
+! [internal]
+  character(128) :: fittype
   integer :: i, zi, knum, znum
   double precision :: Om_m, Om_v, a, sig, rknl, rneff, rncur, d1, d2, diff, xlogr1, xlogr2, rmid, dlin, dnl, w
 
   znum = size(z)
   knum = size(k)
   pnl  = plin
+
+  fittype = 'T12'
+  if (present(ftype)) fittype = ftype
 
   do zi = 1, znum
     ! calculate nonlinear wavenumber (rknl), effective spectral index (rneff) and
@@ -714,7 +722,8 @@ subroutine NonLinRatios(plin,z,k,cp,pnl)
         ! dimension less linear power spectrum: dlin = k^3 * P(k) * 4*pi*V/(2*pi)^3
         dlin = plin(zi,i)*(k(i)**3/(2*pi**2))
         w = cp%w0+(1d0-a)*cp%wa
-        call halofit_T12(k(i),rneff,rncur,rknl,dlin,dnl,Om_m,Om_v,cp%Om,w,cp%nu)
+        if (fittype=='S02') call halofit_S02(k(i),rneff,rncur,rknl,dlin,dnl,Om_m,Om_v)
+        if (fittype=='T12') call halofit_T12(k(i),rneff,rncur,rknl,dlin,dnl,Om_m,Om_v,cp%Om,w,cp%nu)
         if (dnl>dlin) pnl(zi,i) = (dnl/dlin)*plin(zi,i)
       end if
     end do

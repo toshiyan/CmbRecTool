@@ -916,12 +916,12 @@ subroutine alflat_tt_asym(nn,D,OC1,OC2,CT,rL,eL,Alg,Alc)
     if (present(Alg)) then
       iAlg = (ll(1,n)**2*(Al(1,n)+Al(4,n)) + ll(1,n)*ll(2,n)*(Al(2,n)+Al(5,n)) + ll(2,n)**2*(Al(3,n)+Al(6,n)))*0.5d0 &
         + ll(1,n)**2*Bl(1,n) + ll(2,n)**2*Bl(2,n) + ll(1,n)*ll(2,n)*sum(Bl(3:4,n))
-      if(iAlg>0d0) Alg(n) = 1d0/iAlg
+      if(iAlg>0d0) Alg(n) = 2d0/iAlg
     end if
     if (present(Alc)) then
       iAlc = (ll(2,n)**2*(Al(1,n)+Al(4,n)) - ll(1,n)*ll(2,n)*(Al(2,n)+Al(5,n)) + ll(1,n)**2*(Al(3,n)+Al(6,n)))*0.5d0 &
         + ll(2,n)**2*Bl(1,n) + ll(1,n)**2*Bl(2,n) - ll(1,n)*ll(2,n)*sum(Bl(3:4,n))
-      if(iAlc>0d0) Alc(n) = 1d0/iAlc
+      if(iAlc>0d0) Alc(n) = 2d0/iAlc
     end if
   end do
 

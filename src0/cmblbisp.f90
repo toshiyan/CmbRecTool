@@ -15,7 +15,7 @@ module cmblbisp
 contains
 
 
-subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype,pkout,knl)
+subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype,pkout,knl,ftype)
 ! compute k and Pk at k=l/chi, factor (fac) for LSS bispectrum, F2-kernel coefficients (abc), 
 ! weighted potential spectrum (wp), and kappa spectrum at [chi,chi_s] (ck)
   implicit none
@@ -34,7 +34,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   !(optional)
   ! btype  --- type of bispectrum (kkk,gkk,ggk)
   ! pkout  --- output Pk data
-  character(*), intent(in), optional :: btype
+  character(*), intent(in), optional :: btype, ftype
   integer, optional :: pkout
   double precision, optional :: knl(:)
 
@@ -48,10 +48,14 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   double precision, intent(out) :: kl(:,:), pl(:,:), zker(:), abc(:,:,:), wp(:,:), ck(:,:)
 
   !internal
-  character(4) :: bisptype
+  character(4) :: bisptype, fittype
   integer :: i, zn, kn
   double precision :: s0, chis, h
   double precision, allocatable :: Hz(:), chi(:), D(:), wlf(:), pki(:,:), pklini(:,:)
+
+
+  fittype = 'T12'
+  if (present(ftype)) fittype = ftype
 
   zn = size(z)  !number of z points for z-integral
   kn = size(ki) !number of CAMB output k
@@ -95,7 +99,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   if (present(knl)) call get_knl(ki,pklini,knl)
 
   if (model=='TR')  pki = pklini  !use linear 
-  if (model/='TR')  call NonLinRatios(pklini,z,ki,cp,pki) !nonlinear Pk
+  if (model/='TR')  call NonLinRatios(pklini,z,ki,cp,pki,ftype=fittype) !nonlinear Pk
 
   if (present(pkout)) then
     call savetxt('pklin.dat',ki/h,pklini(pkout,:)*h**3,ow=.true.)
