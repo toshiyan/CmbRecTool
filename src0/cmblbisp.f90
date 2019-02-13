@@ -119,7 +119,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   call Limber_k2l(chi,ki,pki,kl,pl(2,:,:))
 
   !* precompute F2-kernel coefficients a, b, c 
-  if (model=='SC'.or.model=='GM')  call precompute_coeff_abc(D*s0,kl,ki,pklini,abc,model)
+  if (model=='SC'.or.model=='GM')  call coeff_abc(D*s0,kl,ki,pklini,abc,model)
 
   !* precompute for post born
   call precompute_postborn(dz/Hz,chi,chis,wlf,kl,pl(2,:,:),wp,ck)
@@ -263,231 +263,49 @@ subroutine F2_Kernel(k,abc1,abc2,F2,lambda,kappa)
 end subroutine F2_Kernel
 
 
-subroutine bisp_equi(eL,k,pl,fac,abc,wp,ck,bl,Dz,knl,model,btype,ltype,lambda,kappa)
-! equilateral bispectrum
+subroutine bispec_matter(k,Pk,abc,bk,fh,model)
   implicit none
-  !I/O
-  integer, intent(in) :: eL(2)
-  double precision, intent(in) :: k(:,:), pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
-  double precision, intent(out) :: bl(:)
-  !optional
-  character(*), intent(in), optional :: model, btype, ltype
-  double precision, intent(in), optional :: lambda(:), kappa(:)
+  !input
+  double precision, intent(in) :: k(3), Pk(2,3), abc(3,3)
+  double precision, intent(in), optional :: fh(3)
+  character(*), intent(in), optional :: model
+  !output
+  double precision, intent(out) :: bk
   !internal
-  character(8) :: b='', lt='', m=''
-  integer :: l, i, zn
-  double precision :: bisp, F2, p(3), fih(3)
-  double precision, allocatable :: lam(:), kap(:)
+  character(16) :: m = ''
+  double precision :: F2(3), p(3)
 
-  ! initial set up
-  bl = 0d0
-  zn = size(k,dim=1)
-  if (present(btype)) b  = btype
-  if (present(ltype)) lt = ltype
-  if (present(model)) m  = model
+  if (present(model)) m = model
+  if (m/=''.and..not.present(fh)) stop 'error (bispec_matter): fh is required'
 
-  ! MG parameters
-  allocate(lam(zn),kap(zn)); lam=1d0; kap=1d0
-  if (present(lambda)) lam = lambda
-  if (present(kappa))  kap = kappa
+  select case(m)
+  case('3B')
 
-  ! compute blll
-  select case(b)
-
-  case ('pb')  !post-Born bispectrum
-
-    do l = eL(1), eL(2)
-      call bisp_postborn(l,l,l,wp,ck,bl(l))
-      if (lt=='full') bl(l) = bl(l) * W3j_approx(dble(l),dble(l),dble(l)) * dsqrt((2d0*l+1d0)**3/(4d0*pi))
-    end do
-
-  case ('LSS') !LSS bispectrum
-
-    !for 3-shape
-    p(1) = dsqrt( 7d0/10d0 * (1d0+3d0/7d0*1.008d0) ) !Om^{-1/143} ~ 1.008
+    !p(1) = dsqrt( 7d0/10d0 * (1d0+3d0/7d0*1.008d0) )
+    !p(3) = dsqrt( 7d0/4d0 * (1d0-3d0/7d0*1.008d0) )
+    p(1) = 1.0011993d0 !Om^{-1/143} ~ 1.008
     p(2) = 1d0
-    p(3) = dsqrt( 7d0/4d0 * (1d0-3d0/7d0*1.008d0) )
+    p(3) = 0.9969955d0
+    call F2_Kernel(k([1,2,3]),p,p,F2(1))
+    call F2_Kernel(k([2,3,1]),p,p,F2(2))
+    call F2_Kernel(k([3,1,2]),p,p,F2(3))
+    bk = fh(1) + fh(2)*(Pk(1,1)*Pk(1,2)+Pk(1,2)*Pk(1,3)+Pk(1,3)*Pk(1,1))/3d0 + fh(3)*2d0*(F2(1)*Pk(2,1)*Pk(2,2)+F2(2)*Pk(2,2)*Pk(2,3)+F2(3)*Pk(2,3)*Pk(2,1))
 
-    !loop
-    do l = eL(1), eL(2)
-      do i = 1, zn
+  case default
 
-        if (m=='3B') then
-
-          call F2_Kernel([k(i,l),k(i,l),k(i,l)],p,p,F2,lam(i),kap(i))
-          fih = coeff_fih(3*k(i,l),Dz(i),knl(i))
-          bl(l) = bl(l) + fac(i) * ( fih(1) + fih(2)*pl(1,i,l)**2 + 3d0*fih(3)*2d0*F2*pl(2,i,l)**2 )
-
-        else
-
-          call F2_Kernel([k(i,l),k(i,l),k(i,l)],abc(:,i,l),abc(:,i,l),F2,lam(i),kap(i))
-          bl(l) = bl(l) + fac(i) * 3d0 * 2d0*F2*pl(2,i,l)**2
-
-        end if
-
-      end do
-      if (lt=='full') bl(l) = bl(l) * W3j_approx(dble(l),dble(l),dble(l)) * dsqrt((2d0*l+1d0)**3/(4d0*pi))
-    end do
+    call F2_Kernel(k([1,2,3]),abc(:,1),abc(:,2),F2(1))
+    call F2_Kernel(k([2,3,1]),abc(:,2),abc(:,3),F2(2))
+    call F2_Kernel(k([3,1,2]),abc(:,3),abc(:,1),F2(3))
+    bk = 2d0*(F2(1)*Pk(2,1)*Pk(2,2) + F2(2)*Pk(2,2)*Pk(2,3) + F2(3)*Pk(2,3)*Pk(2,1))
 
   end select
 
-  deallocate(lam,kap)
+
+end subroutine bispec_matter
 
 
-end subroutine bisp_equi
-
-
-subroutine bisp_fold(eL,k,pl,fac,abc,wp,ck,bl,D,knl,model,btype,ltype,lambda,kappa)
-! folded bispectrum
-  implicit none
-  !I/O
-  integer, intent(in) :: eL(2)
-  double precision, intent(in) :: k(:,:), pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), D(:), knl(:)
-  double precision, intent(out) :: bl(:)
-  !optional
-  character(*), intent(in), optional :: model, btype, ltype
-  double precision, intent(in), optional :: lambda(:), kappa(:)
-  !internal
-  character(8) :: b='', lt='', m=''
-  integer :: l, i, zn
-  double precision :: bisp, F2(3), p(3), fih(3)
-  double precision, allocatable :: lam(:), kap(:)
-
-  zn = size(k,dim=1)
-  if (present(btype)) b  = btype
-  if (present(ltype)) lt = ltype
-  if (present(model)) m  = model
-
-  allocate(lam(zn),kap(zn)); lam=1d0; kap=1d0
-  if (present(lambda)) lam = lambda
-  if (present(kappa))  kap = kappa
-
-  !for 3-shape
-  p(1) = dsqrt( 7d0/10d0 * (1d0+3d0/7d0*1.008d0) ) !Om^{-1/143} ~ 1.008
-  p(2) = 1d0
-  p(3) = dsqrt( 7d0/4d0 * (1d0-3d0/7d0*1.008d0) )
-
-  do l = eL(1), eL(2)
-    bisp = 0d0
-    if (b=='pb') call bisp_postborn(2*l,l,l,wp,ck,bisp)
-    if (b=='LSS') then 
-      do i = 1, zn
-        if (m=='3B') then
-          call F2_Kernel([k(i,l),k(i,l),k(i,2*l)],p,p,F2(1),lam(i),kap(i))
-          call F2_Kernel([k(i,l),k(i,2*l),k(i,l)],p,p,F2(2),lam(i),kap(i))
-          call F2_Kernel([k(i,2*l),k(i,l),k(i,l)],p,p,F2(3),lam(i),kap(i))
-          fih = coeff_fih(2*k(i,l)+k(i,l*2),D(i),knl(i))
-          bisp = bisp + fac(i) * ( fih(1) + fih(2)*(pl(1,i,l)**2+2d0*pl(1,i,l)*pl(1,i,2*l))/3d0 + fih(3)*2d0*(F2(1)*pl(2,i,l)*pl(2,i,l)+F2(2)*pl(2,i,l)*pl(2,i,2*l)+F2(3)*pl(2,i,2*l)*pl(2,i,l)) )
-        else
-          call F2_Kernel([k(i,l),k(i,l),k(i,2*l)],abc(:,i,l),abc(:,i,l),F2(1),lam(i),kap(i))
-          call F2_Kernel([k(i,l),k(i,2*l),k(i,l)],abc(:,i,l),abc(:,i,2*l),F2(2),lam(i),kap(i))
-          call F2_Kernel([k(i,2*l),k(i,l),k(i,l)],abc(:,i,2*l),abc(:,i,l),F2(3),lam(i),kap(i))
-          bisp = bisp + fac(i) * 2d0*(F2(1)*pl(2,i,l)*pl(2,i,l) + F2(2)*pl(2,i,l)*pl(2,i,2*l) + F2(3)*pl(2,i,2*l)*pl(2,i,l))
-        end if
-      end do
-    end if
-    if (lt=='full') bisp = bisp * W3j_approx(dble(l),dble(l),dble(2*l)) * dsqrt((2d0*l+1d0)**2*(4d0*l+1)/(4d0*pi))
-    bl(2*l) = bisp
-  end do
-
-  deallocate(lam,kap)
-
-end subroutine bisp_fold
-
-
-subroutine bisp_sque(eL,k,Pk,fac,abc,wp,ck,l0,bl,btype,ltype,lambda,kappa)
-! squeezed bispectrum
-  implicit none
-  !I/O
-  character(*), intent(in), optional :: btype, ltype
-  integer, intent(in) :: eL(2), l0
-  double precision, intent(in) :: k(:,:), Pk(:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
-  double precision, intent(out) :: bl(:)
-  double precision, intent(in), optional :: lambda(:), kappa(:)
-  !internal
-  character(8) :: b='', lt=''
-  integer :: l, i, zn
-  double precision :: bisp, F2(3)
-  double precision, allocatable :: lam(:), kap(:)
-
-  zn = size(k,dim=1)
-  if (present(btype)) b  = btype
-  if (present(ltype)) lt = ltype
-
-  allocate(lam(zn),kap(zn)); lam=1d0; kap=1d0
-  if (present(lambda))  lam = lambda
-  if (present(kappa))   kap = kappa
-
-  !do l = max(l0,eL(1)), eL(2)
-  bl = 0d0
-  do l = eL(1), eL(2)
-    if (2*l<l0) cycle
-    bisp = 0d0
-    if (b=='pb') call bisp_postborn(l0,l,l,wp,ck,bisp)
-    if (b=='LSS') then
-      do i = 1, zn
-        call F2_Kernel([k(i,l),k(i,l),k(i,l0)],abc(:,i,l),abc(:,i,l),F2(1),lam(i),kap(i))
-        call F2_Kernel([k(i,l),k(i,l0),k(i,l)],abc(:,i,l),abc(:,i,l0),F2(2),lam(i),kap(i))
-        call F2_Kernel([k(i,l0),k(i,l),k(i,l)],abc(:,i,l0),abc(:,i,l),F2(3),lam(i),kap(i))
-        bisp = bisp + fac(i) * 2d0*(F2(1)*Pk(i,l)*Pk(i,l) + F2(2)*Pk(i,l)*Pk(i,l0) + F2(3)*Pk(i,l0)*Pk(i,l))
-      end do
-    end if
-    if (lt=='full') bisp = bisp * W3j_approx(dble(l),dble(l),dble(l0)) * dsqrt((2d0*l+1d0)**2*(2d0*l0+1)/(4d0*pi))
-    bl(l) = bisp
-  end do
-
-  deallocate(lam,kap)
-
-end subroutine bisp_sque
-
-
-subroutine bisp_angl(eL,k,Pk,fac,abc,wp,ck,bl,btype,ltype,lambda,kappa)
-! squeezed bispectrum
-  implicit none
-  !I/O
-  character(*), intent(in), optional :: btype, ltype
-  integer, intent(in) :: eL(2)
-  double precision, intent(in) :: k(:,:), Pk(:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
-  double precision, intent(out) :: bl(:)
-  double precision, intent(in), optional :: lambda(:), kappa(:)
-  !internal
-  character(8) :: b='', lt=''
-  integer :: l, i, zn, lc
-  double precision :: bisp, F2(3)
-  double precision, allocatable :: lam(:), kap(:)
-
-  zn = size(k,dim=1)
-  if (present(btype)) b  = btype
-  if (present(ltype)) lt = ltype
-
-  allocate(lam(zn),kap(zn)); lam=1d0; kap=1d0
-  if (present(lambda))  lam = lambda
-  if (present(kappa))   kap = kappa
-
-  bl = 0d0
-  lc = int(eL(2)/2)
-  do l = eL(1), eL(2)
-    bisp = 0d0
-    if (b=='pb') call bisp_postborn(l,lc,lc,wp,ck,bisp)
-    if (b=='LSS') then
-      do i = 1, zn
-        call F2_Kernel([k(i,l),k(i,lc),k(i,lc)],abc(:,i,l),abc(:,i,lc),F2(1),lam(i),kap(i))
-        call F2_Kernel([k(i,lc),k(i,l),k(i,lc)],abc(:,i,lc),abc(:,i,l),F2(2),lam(i),kap(i))
-        call F2_Kernel([k(i,lc),k(i,lc),k(i,l)],abc(:,i,lc),abc(:,i,lc),F2(3),lam(i),kap(i))
-        bisp = bisp + fac(i) * 2d0*(F2(1)*Pk(i,l)*Pk(i,lc) + F2(2)*Pk(i,lc)*Pk(i,l) + F2(3)*Pk(i,lc)*Pk(i,lc))
-      end do
-    end if
-    if (lt=='full') bisp = bisp * W3j_approx(dble(l),dble(lc),dble(lc)) * dsqrt((2d0*l+1d0)*(2d0*lc+1)**2/(4d0*pi))
-    bl(l) = bisp
-  end do
-
-  deallocate(lam,kap)
-
-end subroutine bisp_angl
-
-
-subroutine bisp_postborn(l1,l2,l3,wp,ck,bisp)
-! compute bispectrum from post-Born correction
+subroutine bispec_postborn(l1,l2,l3,wp,ck,bisp)
+! compute lensing bispectrum from post-Born correction
   implicit none
   !I/O
   integer, intent(in) :: l1, l2, l3
@@ -509,22 +327,122 @@ subroutine bisp_postborn(l1,l2,l3,wp,ck,bisp)
   bisp = bisp + l2l3/(2d0*al2**2*al3**2)*(l1l2*al2**4*sum(wp(:,l2)*ck(:,l3))+l3l1*al3**4*sum(wp(:,l3)*ck(:,l2)))
   bisp = bisp + l3l1/(2d0*al3**2*al1**2)*(l2l3*al3**4*sum(wp(:,l3)*ck(:,l1))+l1l2*al1**4*sum(wp(:,l1)*ck(:,l3)))
 
-end subroutine bisp_postborn
+end subroutine bispec_postborn
 
 
-function rebisp_fbin(eL1,eL2,eL3,zn,k,pl,fac,abc,wp,ck,D,knl,model,btype)  result(f)
-! reduced bispectrum with flat binning
+subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,Dz,knl,model,btype,ltype,lambda,kappa)
+! lensing bispectrum
   implicit none
-  character(*), intent(in) :: btype, model
-  integer, intent(in) :: eL1(2), eL2(2), eL3(2), zn
-  double precision, intent(in) :: k(:,:), pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), D(:), knl(:)
-  integer :: l1, l2, l3, i
-  double precision :: f, norm, bisp, hlll, tot, F2(3), p(3), fih(3)
+  !I/O
+  character(*), intent(in) :: shap
+  integer, intent(in) :: eL(2)
+  double precision, intent(in) :: k(:,:), pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+  double precision, intent(out) :: bl(:)
+  !optional
+  character(*), intent(in), optional :: model, btype, ltype
+  integer, intent(in), optional :: l0
+  double precision, intent(in), optional :: lambda(:), kappa(:)
+  !internal
+  character(8) :: b='', lt='', m=''
+  integer :: l, i, zn, l1, l2, l3
+  double precision :: bk, fh(3)
+  double precision, allocatable :: lam(:), kap(:)
 
-  !for 3-shape
-  p(1) = dsqrt( 7d0/10d0 * (1d0+3d0/7d0*1.008d0) ) !Om^{-1/143} ~ 1.008
-  p(2) = 1d0
-  p(3) = dsqrt( 7d0/4d0 * (1d0-3d0/7d0*1.008d0) )
+  ! initial set up
+  bl = 0d0
+  zn = size(k,dim=1)
+  if (present(btype)) b  = btype
+  if (present(ltype)) lt = ltype
+  if (present(model)) m  = model
+
+  ! MG extension parameters
+  allocate(lam(zn),kap(zn)); lam=1d0; kap=1d0
+  if (present(lambda)) lam = lambda
+  if (present(kappa))  kap = kappa
+
+  ! compute bispectrum
+  do l = eL(1), eL(2)
+
+    if (shap=='fold'.and.mod(l,2)/=0) cycle
+    if (shap=='sque'.and.2*l<l0)      cycle
+
+    ! choose a bispectrum configuration
+    select case(shap)
+    case('equi')
+      l1 = l
+      l2 = l 
+      l3 = l
+    case('fold')
+      l1 = l
+      l2 = l/2
+      l3 = l/2
+    case('sque')
+      l1 = eL(1)
+      if (present(l0)) l1 = l0
+      l2 = l
+      l3 = l
+    case('angl')
+      l1 = l
+      l2 = int(eL(2)/2)
+      l3 = int(eL(2)/2)
+    end select
+
+    select case(b)
+    case ('pbn')  !post-Born bispectrum
+
+      call bispec_postborn(l1,l2,l3,wp,ck,bl(l))
+
+    case ('lss') !LSS bispectrum
+
+      do i = 1, zn
+        fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
+        call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+        bl(l) = bl(l) + fac(i) * bk
+      end do
+
+    case default
+
+      stop 'no bispectrum type'
+
+    end select
+
+    !fullsky angular bispectrum
+    if (lt=='full') bl(l) = bl(l) * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
+
+  end do
+
+  deallocate(lam,kap)
+
+
+end subroutine bispec_lens
+
+
+subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
+! reduced bispectrum with flat binning
+  ![input]
+  ! btype -- lss or pbn
+  ! m     -- matter bispectrum model (TR,GM,SC,3B,...)
+  ! eL1, eL2, eL3 --- multipole bin ranges
+  ! k     -- l/chi
+  ! Pl    -- P(chi,k=l/chi)
+  ! zkar  -- kernel function of z
+  ! abc   -- F2 kernel coefficients
+  ! wp, ck -- for postborn
+  ! Dz    -- growth rate
+  ! knl   -- k nonlinear
+  implicit none
+  character(*), intent(in) :: btype, m
+  integer, intent(in) :: eL1(2), eL2(2), eL3(2)
+  double precision, intent(in) :: k(:,:), Pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+
+  ! bl    -- result of binned bispectrum
+  double precision, intent(out) :: bl
+
+  ![internal]
+  integer :: l1, l2, l3, i, zn
+  double precision :: norm, bisp, hlll, tot, bk, fh(3)
+
+  zn = size(k,dim=1)
 
   tot  = 0d0
   norm = 0d0
@@ -539,23 +457,16 @@ function rebisp_fbin(eL1,eL2,eL3,zn,k,pl,fac,abc,wp,ck,D,knl,model,btype)  resul
         bisp = 0d0
 
         !compute F2 kernel at each z, and take sum
-        if (btype=='LSS') then
+        select case(btype)
+        case ('lss')
           do i = 1, zn
-            if (model=='3B') then
-              call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],p,p,F2(1))
-              call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],p,p,F2(2))
-              call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],p,p,F2(3))
-              fih = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),D(i),knl(i))
-              bisp = bisp + fac(i) * ( fih(1) + fih(2)*(pl(1,i,l1)*pl(1,i,l2)+pl(1,i,l2)*pl(1,i,l3)+pl(1,i,l3)*pl(1,i,l1))/3d0 + fih(3)*2d0*(F2(1)*pl(2,i,l1)*pl(2,i,l2)+F2(2)*pl(2,i,l2)*pl(2,i,l3)+F2(3)*pl(2,i,l3)*pl(2,i,l1)) )
-            else
-              call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
-              call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
-              call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
-              bisp = bisp + fac(i) * 2d0*(F2(1)*pl(2,i,l1)*pl(2,i,l2) + F2(2)*pl(2,i,l2)*pl(2,i,l3) + F2(3)*pl(2,i,l3)*pl(2,i,l1))
-            end if
+            fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
+            call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+            bisp = bisp + fac(i) * bk
           end do
-        end if
-        if (btype=='pb') call bisp_postborn(l1,l2,l3,wp,ck,bisp)
+        case ('pbn')
+          call bispec_postborn(l1,l2,l3,wp,ck,bisp)
+        end select
 
         !normalization
         hlll = W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
@@ -568,18 +479,19 @@ function rebisp_fbin(eL1,eL2,eL3,zn,k,pl,fac,abc,wp,ck,D,knl,model,btype)  resul
     end do
   end do
 
-  f = tot/norm
+  bl = tot/norm
 
-end function rebisp_fbin
+end subroutine bispec_lens_bin
 
 
-function rebisp_fbin_gauss(eL1,eL2,eL3,cl)  result(f)
-! reduced bispectrum with flat binning (a=g+g^2)
+subroutine bispec_gauss_bin(eL1,eL2,eL3,cl,f)
+! reduced bispectrum for with flat binning (a=g+g^2)
   implicit none
   integer, intent(in) :: eL1(2), eL2(2), eL3(2)
   double precision, intent(in) :: cl(:)
+  double precision, intent(out) :: f
   integer :: l1, l2, l3
-  double precision :: f, norm, bisp, hlll, tot
+  double precision :: norm, bisp, hlll, tot
 
   tot  = 0d0
   norm = 0d0
@@ -601,22 +513,26 @@ function rebisp_fbin_gauss(eL1,eL2,eL3,cl)  result(f)
 
   f = tot/norm
 
-end function rebisp_fbin_gauss
+end subroutine bispec_gauss_bin
 
 
-function snr_bisp(eL,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
-! SNR sum of LSS bispectrum
+function snr_bispec_lens(eL,k,Pl,Cl,fac,abc,wp,ck,Dz,knl,m)  result(f)
+! SNR sum of lensing bispectrum
   implicit none
-  integer, intent(in) :: eL(2), zn
-  double precision, intent(in) :: k(:,:), Pk(:,:), Cl(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
-  integer :: l1, l2, l3, i
-  double precision :: f, cov, Del, bisp(2), tot, F2(1:3)
+  character(*), intent(in) :: m
+  integer, intent(in) :: eL(2)
+  double precision, intent(in) :: k(:,:), Pl(:,:,:), Cl(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+  !internal
+  integer :: l1, l2, l3, i, zn
+  double precision :: f, cov, Del, bisp(2), tot, fh(3), bk
+
+  zn = size(k,dim=1)
 
   tot = 0d0
   do l1 = eL(1), eL(2)
-    !write(*,*) l1
     do l2 = l1, eL(2)
       do l3 = l2, eL(2)
+
         if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
         if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
         if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
@@ -625,40 +541,44 @@ function snr_bisp(eL,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
         if (l1==l2.and.l2/=l3) Del = 2d0
         if (l1/=l2.and.l2==l3) Del = 2d0
         if (l1==l2.and.l2==l3) Del = 6d0
+
         bisp = 0d0
-        !compute F2 kernel at each z, and take sum
         do i = 1, zn
-          call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
-          call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
-          call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
-          bisp(1) = bisp(1) + fac(i) * 2d0*(F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
+          fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
+          call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+          bisp(1) = bisp(1) + fac(i) * bk
         end do
-        call bisp_postborn(l1,l2,l3,wp,ck,bisp(2))
+        call bispec_postborn(l1,l2,l3,wp,ck,bisp(2))
+
         !flat sky -> full sky
         bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
+
         !SNR
         cov = Del*Cl(l1)*Cl(l2)*Cl(l3)
         tot = tot + sum(bisp)**2/cov
+
       end do
     end do
   end do
 
   f = tot
 
-end function snr_bisp
+end function snr_bispec_lens
 
 
-function snr_bisp_assym(eL1,eL2,eL3,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
-! SNR sum of LSS bispectrum
+function snr_bispec_lens_assym(eL1,eL2,eL3,k,Pl,Cl,fac,abc,wp,ck,Dz,knl,m)  result(f)
+! SNR sum of lensing bispectrum with assymetry in l1,l2,l3
   implicit none
-  integer, intent(in) :: eL1(2), eL2(2), eL3(2), zn
-  double precision, intent(in) :: k(:,:), Pk(:,:), Cl(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
-  integer :: l1, l2, l3, i
-  double precision :: f, cov, bisp(2), tot, F2(1:3)
+  character(*), intent(in) :: m
+  integer, intent(in) :: eL1(2), eL2(2), eL3(2)
+  double precision, intent(in) :: k(:,:), Pl(:,:,:), Cl(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+  integer :: l1, l2, l3, i, zn
+  double precision :: f, cov, bisp(2), tot, fh(3), bk
+
+  zn = size(k,dim=1)
 
   tot = 0d0
   do l1 = eL1(1), eL1(2)
-    !write(*,*) l1
     do l2 = eL2(1), eL2(2)
       do l3 = eL3(1), eL3(2)
         if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
@@ -668,12 +588,11 @@ function snr_bisp_assym(eL1,eL2,eL3,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
         bisp = 0d0
         !compute F2 kernel at each z, and take sum
         do i = 1, zn
-          call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
-          call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
-          call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
-          bisp(1) = bisp(1) + fac(i) * 2d0*(F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
+          fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
+          call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+          bisp(1) = bisp(1) + fac(i) * bk
         end do
-        call bisp_postborn(l1,l2,l3,wp,ck,bisp(2))
+        call bispec_postborn(l1,l2,l3,wp,ck,bisp(2))
         !flat sky -> full sky
         bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
         !SNR
@@ -685,19 +604,19 @@ function snr_bisp_assym(eL1,eL2,eL3,zn,k,Pk,Cl,fac,abc,wp,ck)  result(f)
 
   f = tot
 
-end function snr_bisp_assym
+end function snr_bispec_lens_assym
 
 
-
-function snr_xbisp(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck,btype)  result(f)
+function snr_xbisp(eL,k,Pl,cgg,ckk,fac,abc,wp,ck,btype,Dz,knl,m)  result(f)
 ! SNR sum of gkk or ggk bispectrum
   implicit none
-  character(*), intent(in) :: btype
-  integer, intent(in) :: eL(2), zn
-  double precision, intent(in) :: k(:,:), Pk(:,:), cgg(:), ckk(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
-  integer :: l1, l2, l3, i
-  double precision :: f, cov, Del, bisp, tot, F2(1:3)
+  character(*), intent(in) :: btype, m
+  integer, intent(in) :: eL(2)
+  double precision, intent(in) :: k(:,:), Pl(:,:,:), cgg(:), ckk(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+  integer :: l1, l2, l3, i, zn
+  double precision :: f, cov, Del, bisp, tot, fh(3), bk
 
+  zn = size(k,dim=1)
   tot = 0d0
   do l1 = eL(1), eL(2)
     if (mod(l1,10)==0) write(*,*) l1
@@ -712,10 +631,9 @@ function snr_xbisp(eL,zn,k,Pk,cgg,ckk,fac,abc,wp,ck,btype)  result(f)
         bisp = 0d0
         !compute F2 kernel at each z, and take sum
         do i = 1, zn
-          call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
-          call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
-          call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
-          bisp = bisp + fac(i) * 2d0*(F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
+          fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
+          call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+          bisp = bisp + fac(i) * bk
         end do
         !flat sky -> full sky
         bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
@@ -744,7 +662,7 @@ function coeff_fih(Kl,Dz,knl)  result(f)
 end function coeff_fih
 
 
-subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
+subroutine coeff_abc(sz,kl,ki,pli,abc,model)
 ! precomputing F2-kernel fitting coefficitents
   implicit none
   !I/O
@@ -793,7 +711,7 @@ subroutine precompute_coeff_abc(sz,kl,ki,pli,abc,model)
 
   deallocate(knl,n)
 
-end subroutine precompute_coeff_abc
+end subroutine coeff_abc
 
 
 subroutine get_knl(k,PkL,knl)
@@ -943,60 +861,6 @@ subroutine precompute_W3j(lmin,W3)
   end do
 
 end subroutine precompute_W3j
-
-
-#ifdef all
-subroutine error_equi_bin(eL,zn,k,Pk,Cl,fac,abc,wp,ck,bp,berr)
-! binned error of LSS bispectrum
-  implicit none
-  integer, intent(in) :: eL(2), zn
-  double precision, intent(in) :: bp(:), k(:,:), Pk(:,:), Cl(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
-  double precision, intent(out) :: berr(:,:)
-  integer :: l1, l2, l3, i, b, bn
-  double precision :: cov, Del, bisp(2), tot(2,bn), F2(1:3)
-
-  berr = 0d0
-
-  do b = 1, bn
-
-    do l1 = bp(b), bp(b+1)-1
-      write(*,*) l1
-      do l2 = l1, bp(b+1)-1
-        do l3 = l2, bp(b+1)-1
-
-          if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
-          if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
-          if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
-          if (mod(l1+l2+l3,2)==1) cycle
-          Del = 1d0
-          if (l1==l2.and.l2/=l3) Del = 2d0
-          if (l1/=l2.and.l2==l3) Del = 2d0
-          if (l1==l2.and.l2==l3) Del = 6d0
-          bisp = 0d0
-
-          !compute F2 kernel at each z, and take sum
-          do i = 1, zn
-            call F2_Kernel([k(i,l1),k(i,l2),k(i,l3)],abc(:,i,l1),abc(:,i,l2),F2(1))
-            call F2_Kernel([k(i,l2),k(i,l3),k(i,l1)],abc(:,i,l2),abc(:,i,l3),F2(2))
-            call F2_Kernel([k(i,l3),k(i,l1),k(i,l2)],abc(:,i,l3),abc(:,i,l1),F2(3))
-            bisp(1) = bisp(1) + fac(i) * (F2(1)*Pk(i,l1)*Pk(i,l2) + F2(2)*Pk(i,l2)*Pk(i,l3) + F2(3)*Pk(i,l3)*Pk(i,l1))
-          end do
-          bisp(2) = bisp(1)
-          call bisp_postborn(l1,l2,l3,wp,ck,bisp(2))
-          !flat sky -> full sky
-          bisp = bisp * W3j_approx(dble(l1),dble(l2),dble(l3)) * dsqrt((2d0*l1+1d0)*(2d0*l2+1d0)*(2d0*l3+1d0)/(4d0*pi))
-          !SNR
-          cov = Del*Cl(l1)*Cl(l2)*Cl(l3)
-          berr(:,b) = berr(:,b) + bisp**2/cov
-
-        end do
-      end do
-    end do
-
-  end do
-
-end subroutine error_equi_bin
-#endif all
 
 
 end module cmblbisp
