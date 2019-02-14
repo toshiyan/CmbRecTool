@@ -516,12 +516,13 @@ subroutine bispec_gauss_bin(eL1,eL2,eL3,cl,f)
 end subroutine bispec_gauss_bin
 
 
-function snr_bispec_lens(eL,k,Pl,Cl,fac,abc,wp,ck,Dz,knl,m)  result(f)
+subroutine snr_bispec_lens(eL,k,Pl,Cl,fac,abc,wp,ck,Dz,knl,m,snr)
 ! SNR sum of lensing bispectrum
   implicit none
   character(*), intent(in) :: m
   integer, intent(in) :: eL(2)
   double precision, intent(in) :: k(:,:), Pl(:,:,:), Cl(:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+  double precision, intent(out) :: snr
   !internal
   integer :: l1, l2, l3, i, zn
   double precision :: f, cov, Del, bisp(2), tot, fh(3), bk
@@ -561,9 +562,9 @@ function snr_bispec_lens(eL,k,Pl,Cl,fac,abc,wp,ck,Dz,knl,m)  result(f)
     end do
   end do
 
-  f = tot
+  snr = dsqrt(tot)
 
-end function snr_bispec_lens
+end subroutine snr_bispec_lens
 
 
 function snr_bispec_lens_assym(eL1,eL2,eL3,k,Pl,Cl,fac,abc,wp,ck,Dz,knl,m)  result(f)
