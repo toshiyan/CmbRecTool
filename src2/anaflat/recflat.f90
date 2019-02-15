@@ -465,7 +465,7 @@ end subroutine quadbb
 !/////////////////////////////////////////////////////////////////////////////////////!
 ! 2D normalization
 
-subroutine alflat_tt(nn,D,OC,CT,rL,eL,Alg,Alc)
+subroutine alflat_tt(nn,D,OC,CT,rL,eL,Alg,Alc,ratio)
   implicit none
 
   !I/O
@@ -477,6 +477,7 @@ subroutine alflat_tt(nn,D,OC,CT,rL,eL,Alg,Alc)
   !(optional)
   ! Alg(nn(1)*nn(2)) --- normalization (gradient)
   ! Alc(nn(1)*nn(2)) --- normalization (curl)
+  double precision, intent(in), optional :: ratio(:)
   double precision, intent(out), optional :: Alg(:), Alc(:)
 
   !internal
@@ -497,12 +498,14 @@ subroutine alflat_tt(nn,D,OC,CT,rL,eL,Alg,Alc)
   do n = 1, npix
     if(rL(1)>els(n).or.els(n)>rL(2)) cycle
     vec     = CT(n)**2 * OC(n)
+    if (present(ratio)) vec = vec*ratio(n)
     A1(1,n) = ll(1,n)**2 * vec
     A1(2,n) = 2d0*ll(1,n)*ll(2,n) * vec
     A1(3,n) = ll(2,n)**2 * vec
     A2(1,n) = OC(n)
     B1(:,n) = ll(:,n) * CT(n) * OC(n)
     B2(:,n) = B1(:,n)
+    if (present(ratio)) B1(:,n) = B1(:,n)*ratio(n)
   end do
 
   !* convolution

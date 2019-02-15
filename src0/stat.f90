@@ -3,13 +3,13 @@
 !////////////////////////////////////////////////////!
 
 module statistics
+  use myconst, only: signif
   use myutils, only: savetxt, linspace
   use array, only: sort_1d, sort_2d
   implicit none
 
-  double precision, parameter :: signif(3)=[0.68269d0,0.95450d0,0.99730d0]
-
-  private savetxt
+  private signif
+  private savetxt, linspace
   private sort_1d, sort_2d
 
 contains

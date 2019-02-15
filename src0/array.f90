@@ -3,12 +3,8 @@
 !////////////////////////////////////////////////////!
 
 module array
+  use myconst, only: dl, dlc, iu
   implicit none
-
-  !* local variables
-  integer, parameter :: dl  = KIND(1d0)
-  integer, parameter :: dlc = KIND(0d0)
-  complex(dlc), parameter :: iu = (00d0,10d0)
 
   private dl, dlc, iu
 

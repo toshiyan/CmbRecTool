@@ -1281,7 +1281,7 @@ end function param_id
 function str_n(n)  result(f)
   implicit none
   integer, intent(in) :: n
-  character(1+int(log10(dble(n+0.9)))) :: f
+  character(1+idint(log10(dble(n+0.9)))) :: f
   character(LEN=128) :: a
 
   write(a,*) n
