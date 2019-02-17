@@ -7,7 +7,7 @@ target=libanafull.a
 
 ## Complier and options ##
 FC = ifort
-FLAG = -qopenmp -fpp
+FLAG = -qopenmp -fpp -fPIC
 #DBAG = -check all -std -gen_interfaces -fpe0 -ftrapuv -traceback
 FLAGS = $(FLAG) $(DBAG)
 

@@ -7,7 +7,7 @@ target=libnldd.a
 
 ## Complier and options ##
 FC = ifort
-FLAG = -O3 -fpp
+FLAG = -O3 -fpp -fPIC
 #DBAG = -check all -std -gen_interfaces -fpe0 -ftrapuv -traceback
 FLAGS = $(FLAG) $(DBAG)
 

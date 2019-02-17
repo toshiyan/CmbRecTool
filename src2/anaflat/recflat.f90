@@ -851,7 +851,7 @@ end subroutine alflat_eb
 
 
 ! asymmetric case
-subroutine alflat_tt_asym(nn,D,OC1,OC2,CT,rL,eL,Alg,Alc)
+subroutine dmn0flat_tt(nn,D,OC1,OC2,CT,rL,eL,Alg,Alc)
   implicit none
   !I/O
   integer, intent(in) :: nn(1:2), el(1:2), rL(1:2)
@@ -930,7 +930,7 @@ subroutine alflat_tt_asym(nn,D,OC1,OC2,CT,rL,eL,Alg,Alc)
 
   deallocate(Al)
 
-end subroutine alflat_tt_asym
+end subroutine dmn0flat_tt
 
 
 #ifdef useold
