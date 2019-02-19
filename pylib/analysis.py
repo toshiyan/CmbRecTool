@@ -43,7 +43,7 @@ class statistics:
     self.sx2 = sX2
 
 
-  def x1PTE(self,simamp=1):
+  def x1PTE(self,simamp=1,twoside=True):
     # compute chi PTE of ocl using scl
     n   = len(self.scl[:,0])
     # for real data
@@ -54,7 +54,11 @@ class statistics:
     dxi = np.array([self.scl[i,:]-np.mean(np.delete(self.scl,i,0),axis=0) for i in range(n)])
     sX1 = np.array([np.sum(dxi[i,:]/np.std(np.delete(self.scl,i,0),axis=0)) for i in range(n)])
     # output
-    self.px1 = (sX1>oX1).sum()/np.float(n)
+    px1 = (sX1>oX1).sum()/np.float(n)
+    if twoside:
+      self.px1 = 1.-2*np.abs(px1-0.5)
+    else:
+      self.px1 = px1
     self.ox1 = oX1
     self.sx1 = sX1
     #print np.std(sX1), oX1-np.mean(sX1)
