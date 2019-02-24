@@ -654,10 +654,11 @@ end function snr_xbisp
 function coeff_fih(Kl,Dz,knl)  result(f)
   implicit none
   double precision, intent(in) :: knl, Dz, Kl
-  double precision :: f(3)
+  double precision :: f(3), h
 
-  f(1) = (2.45d6*Dz**8/(0.8d0+0.2d0/Dz**3)) / (1d0+0.054*Dz**2.2d0*Kl**2)**2
-  f(2) = 140*Dz**(-5d0/4d0)/(1d0+1.9d0*Dz**(-1.5d0)/Kl)**3
+  h = 0.7d0
+  f(1) = (2.45d6*Dz**8/(0.8d0+0.2d0/Dz**3)) / (1d0+0.054*Dz**2.2d0*h**2*Kl**2)**2
+  f(2) = 140*Dz**(-5d0/4d0)/(1d0+1.9d0*Dz**(-1.5d0)/h/Kl)**3
   f(3) = dexp(-Kl/(7.5d0*knl))
 
 end function coeff_fih
