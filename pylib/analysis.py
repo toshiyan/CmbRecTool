@@ -259,6 +259,29 @@ def apofunc(distance,aposcale):
   return  y - np.sin(2*np.pi*y)/(2*np.pi)
 
 
+def apofunc_flat(mapsize,s,aposcale):
+  # apodization window
+  #   mapsize  --- unit in rad
+  #   s        --- coordinates
+  #   aposcale --- scale of apodization in deg
+  a  = mapsize*.5
+  ss = abs(s)/a
+  x = (1.-ss)/(1.-aposcale)
+  x[x>=1.] = 1.
+  x[x<=0.] = 0.
+  return  x - np.sin(2*np.pi*x)/(2*np.pi)
+
+
+def window_2d(nx,ny,Dx,Dy,aposcale):
+  sx = Dx/nx
+  sy = Dy/ny
+  xi = (np.linspace(0,nx,nx)-1.-nx*0.5)*sx
+  xj = (np.linspace(0,ny,ny)-1.-ny*0.5)*sy
+  Wx = apofunc_flat(Dx,xi,aposcale)
+  Wy = apofunc_flat(Dy,xj,aposcale)
+  return np.outer(Wx,Wy)
+
+
 def opt_weight(x,diag=False):
   # optimal weighting
   #   x --- data like [sim,bin]
