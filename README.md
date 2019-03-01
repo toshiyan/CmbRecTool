@@ -1,9 +1,13 @@
 # CmbRecTool
 
-This Library contains Fortran90 subroutines to reconstruct lensing potential, cosmic birefrimgence, and patchy reionization 
-from cosmic microwave background anisotropies (CMB). The Library also includes subrotuines for delensing, bi-spectrum calculation, and so on. Installing this library at NERSC is straightforward, but the library also works at other environment. 
+The Library has been written by Fortran90 to reconstruct lensing potential, cosmic bi-refrimgence, and patchy reionization from cosmic microwave background anisotropies (CMB) in full and flat sky. The Library also includes subrotuines for delensing, bi-spectrum calculation, and so on. Installing this library at NERSC is straightforward, but the library also works at other environment. 
 
-# Install
+# Current development
+
+  - A python wrapper is now developing. 
+  - Some example codes for RDN0 will be uploaded. 
+
+# Installation for Fortran90 user
 
   0) The code assumes "ifort" (intel fortran compiler) as a fortran compiler. 
 
@@ -24,16 +28,19 @@ an executable file.
 
 # References
 
-In flat sky analysis, verification of the source code is shown in 
+In flat sky analysis, the verification of the source code is given in 
 
-  - https://arxiv.org/abs/1209.0091 for the temperature lensing reconstruction, 
-  - https://arxiv.org/abs/1310.2372 for the polarization lensing reconstruction, 
-  - https://arxiv.org/abs/1612.07855 for the cosmic polarization rotation, 
-  - https://arxiv.org/abs/1703.00169 for the delensing
+  - https://arxiv.org/abs/1209.0091 : the temperature lensing reconstruction, 
+  - https://arxiv.org/abs/1310.2372 : the polarization lensing reconstruction, 
+  - https://arxiv.org/abs/1612.07855 : the cosmic bi-refringence reconstruction, 
+  - https://arxiv.org/abs/1703.00169 : the CMB delensing
+  - https://arxiv.org/abs/1706.05133 : the bi-spectrum
 
-For full sky analysis, the library also supports the subroutines for the lensing reconstruction and delensing as shown in 
+For full sky analysis, the library also supports the subroutines for the lensing reconstruction, patchy reionization reconstruction and delensing as shown in 
 
-  - https://arxiv.org/abs/1405.6568
+  - https://arxiv.org/abs/1405.6568 : the temperature/polarization lensing reconstruction, and delensing
+  - https://arxiv.org/abs/1711.00058 : the patchy reionization reconstruction
+  - https://arxiv.org/abs/1812.10635 : the bi-spectrum
 
 The algorithm written in nldd/xxx.f90 is described in doc/note.pdf
 
