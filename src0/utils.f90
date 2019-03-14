@@ -1443,53 +1443,5 @@ subroutine save_average_2d(f,dat,id,bc)
 end subroutine save_average_2d
 
 
-
-
-!//////////////////////////////////////////////////////////////////////////////!
-! Old functions / subroutines
-!//////////////////////////////////////////////////////////////////////////////!
-
-#ifdef all
-
-function Integ(dx,fx)  result(f)
-  implicit none
-  double precision, intent(in) :: dx(:), fx(:)
-  integer :: i
-  double precision :: f
-
-  f = 0d0
-  do i = 1, size(dx)
-    f = f + dx(i)*fx(i)
-  end do
-
-end function Integ
-
-subroutine meanvar_save(f,b,C)
-!* save input data to file after average over dim=2
-  implicit none
-  !I/O
-  character(*) , intent(in) :: f
-  double precision, intent(in) :: C(:,:,:), b(:)
-  !intenral
-  integer :: i, id, bn
-  double precision, allocatable :: mC(:,:), vC(:,:), bb(:,:)
-
-  id = size(C,dim=2)
-  bn = size(C,dim=3)
-
-  allocate(mC(id,bn),vC(id,bn))
-  do i = 1, id
-    call meanvar(C(:,i,:),mC(i,:),vC(i,:))
-  end do
-  allocate(bb(1,size(b)))
-  bb(1,:) = b
-  call savetxt(f,bb,mC,vC)
-  deallocate(mC,vC,bb)
-
-end subroutine meanvar_save
-
-
-#endif all
-
 end module myutils
 

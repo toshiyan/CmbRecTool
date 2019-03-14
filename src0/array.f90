@@ -13,11 +13,6 @@ module array
     module procedure vec2mat_dble, vec2mat_cmplx, vec2mat_diag
   end interface 
 
-  interface mapcut
-    module procedure mapcut_dble, mapcut_cmplx
-  end interface mapcut
-
-
 contains
 
 !//// operator ////!
@@ -64,90 +59,6 @@ function vec2mat_diag(vec) result(M)
   end do
 
 end function vec2mat_diag
-
-
-!//// utils for array ////!
-subroutine mapcut_dble(imap,mm,omap,nn)
-  implicit none
-! [input]
-!  mm(1:2)      --- nsides of input map
-!  nn(1:2)      --- nsides of output map
-!  imap(1:mpix) --- input maps with size mpix = mm(1)*mm(2)
-!  omap(1:npix) --- input maps with size npix = nn(1)*nn(2)
-  integer, intent(in) :: nn(1:2), mm(1:2)
-  double precision, intent(in)  :: imap(:)
-  double precision, intent(out) :: omap(:)
-!
-! [internal]
-  integer :: i, j
-  double precision, allocatable, dimension(:,:) :: imap2d, omap2d
-
-  allocate(imap2d(mm(1),mm(2)),omap2d(nn(1),nn(2)))
-  imap2d = reshape(imap,mm,order=[2,1])
-  do i = 1, nn(1)
-    do j = 1, nn(2)
-      omap2d(i,j) = imap2d(i,j) 
-    end do
-  end do
-  omap = reshape(transpose(omap2d),[nn(1)*nn(2)])
-  deallocate(imap2d,omap2d)
-
-end subroutine mapcut_dble
-
-
-subroutine mapcut_cmplx(imap,mm,omap,nn)
-  implicit none
-! [input]
-!  mm(1:2)      --- nsides of input map
-!  nn(1:2)      --- nsides of output map
-!  imap(1:mpix) --- input maps with size mpix = mm(1)*mm(2)
-!  omap(1:npix) --- input maps with size npix = nn(1)*nn(2)
-  integer, intent(in) :: nn(1:2), mm(1:2)
-  complex(dlc), intent(in) :: imap(:)
-  complex(dlc), intent(out) :: omap(:)
-!
-! [internal]
-  double precision, allocatable, dimension(:,:) :: imap2c, omap2c
-
-  allocate(imap2c(mm(1)*mm(2),2),omap2c(nn(1)*nn(2),2))
-  imap2c(:,1) = dble(imap)
-  imap2c(:,2) = aimag(imap)
-  call mapcut_dble(imap2c(:,1),mm,omap2c(:,1),nn)
-  call mapcut_dble(imap2c(:,2),mm,omap2c(:,2),nn)
-  omap = omap2c(:,1) + iu*omap2c(:,2)
-  deallocate(imap2c,omap2c)
-
-end subroutine mapcut_cmplx
-
-
-subroutine map_finer_2(cc,ff,cmap,fmap)
-  implicit none
-  !I/O
-  integer, intent(in) :: cc(1:2), ff(1:2)
-  double precision, intent(in) :: cmap(:)
-  double precision, intent(out) :: fmap(:)
-  !internal
-  integer :: i, j, i1, i2, j1, j2
-  double precision, allocatable :: cmap2d(:,:), fmap2d(:,:)
-
-  allocate(cmap2d(cc(1),cc(2)),fmap2d(ff(1),ff(2)))
-  cmap2d = reshape(cmap,(/cc(1),cc(2)/),order=(/2,1/))
-
-  !make finer map
-  do i = 1, cc(1)
-    do j = 1, cc(2)
-      i1 = 2*i-1
-      i2 = 2*i
-      j1 = 2*j-1
-      j2 = 2*j
-      fmap2d(i1:i2,j1:j2) = cmap2d(i,j)
-    end do
-  end do
-  
-  fmap = reshape(transpose(fmap2d),(/ff(1)*ff(2)/))
-  deallocate(cmap2d,fmap2d)
-
-end subroutine map_finer_2
 
 
 !//// 2D array as matrix ////!
