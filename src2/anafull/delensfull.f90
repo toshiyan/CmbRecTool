@@ -3,13 +3,39 @@
 !////////////////////////////////////////////////////!
 
 module delensfull
-  use alm_tools, only: alm2map, alm2map_spin, map2alm_spin
+  use alm_tools, only: alm2map, alm2map_spin, map2alm_spin, alm2map_der
   use myconst, only: dl, dlc, iu
 
-  private alm2map, alm2map_spin, map2alm_spin
+  private alm2map, alm2map_spin, map2alm_spin, alm2map_der
   private dl, dlc, iu
 
 contains 
+
+
+subroutine compute_shift_vector(nside,lmax,nremap,plm,beta)
+  implicit none
+  !I/O
+  integer, intent(in) :: nside, lmax, nremap
+  complex(dlc), intent(in) :: plm(:,:,:)
+  double precision, intent(out) :: beta(:,:)
+  !internal
+  integer :: npix, j
+  double precision, allocatable :: map(:), alpha(:,:), dalpha(:,:)
+
+  npix = 12*nside**2
+
+  allocate(map(0:npix-1),alpha(0:npix-1,2),dalpha(0:npix-1,3))
+
+  call alm2map_der(nside,lmax,lmax,plm,map,alpha,dalpha)
+  beta = 0d0
+  do j = 1, nremap
+    beta(:,1) = alpha(:,1) - dalpha(:,1)*beta(:,1) - dalpha(:,2)*beta(:,2)
+    beta(:,2) = alpha(:,2) - dalpha(:,2)*beta(:,1) - dalpha(:,3)*beta(:,2)
+  end do
+
+  deallocate(map,alpha,dalpha)
+
+end subroutine compute_shift_vector
 
 
 subroutine LensingB(nside,WElm,Wglm,lBlm,eL,gL,bL)
