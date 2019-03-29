@@ -15,7 +15,7 @@ program main
   character(LEN=50) :: key(1:5)
   logical :: QDO(1:7)
   integer :: el(2), rL(2), dL(2)
-  double precision, allocatable :: l(:),UC(:,:),LC(:,:),OC(:,:),Nl(:,:),Al(:,:,:)
+  double precision, allocatable :: l(:),UC(:,:),LC(:,:),OC(:,:),Nl(:,:),Al(:,:,:), rBB(:,:)
 
   call set_params_file
   call read_prm('rL',rL)
@@ -34,7 +34,7 @@ program main
   LC(dd,:) = UC(dd,:) !for P15
 
   !* experimental noise if needed
-  allocate(OC(7,eL(2)),Al(QMV,2,dL(2)),Nl(2,eL(2)))
+  allocate(OC(7,eL(2)),Al(QMV,2,dL(2)),Nl(2,eL(2)),rBB(2,eL(2)))
   OC = LC
   if(.not.read_log('CV')) then
     key(1) = 'nchan1'
@@ -50,12 +50,13 @@ program main
   call al_interface(rL,dL,LC,OC,Al(:,1,:),Al(:,2,:),QDO)
 
   !* computing residual Cl^BB
-  call res_clbb(eL,dL,LC(EE,:),UC(dd,:),OC(BB,:),NE=Nl(2,:),Np=Al(QEB,1,:))
+  call res_clbb(eL,dL,LC(EE,:),UC(dd,:),rBB(1,:),NE=Nl(2,:),Np=Al(QTT,1,:))
+  call res_clbb(eL,dL,LC(EE,:),UC(dd,:),rBB(2,:),NE=Nl(2,:),Np=Al(QEB,1,:))
   !call clbb_lin(eL,dL,LC(EE,:),UC(dd,:),LC(BB,:))
 
   !* residual ClBB
-  call savetxt('rClBB.dat',l,Al(QEB,1,:),OC(BB,:),LC(BB,:),OC(BB,:)/LC(BB,:),ow=.true.)
-  deallocate(l,LC,UC,OC,Al,Nl)
+  call savetxt('rClBB.dat',l,rBB(1,:),rBB(2,:),LC(BB,:),ow=.true.)
+  deallocate(l,LC,UC,OC,Al,Nl,rBB)
 
 end program main
 
