@@ -450,6 +450,9 @@ subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
     do l2 = eL2(1), eL2(2)
       do l3 = eL3(1), eL3(2)
 
+        if (l1==0) cycle
+        if (l2==0) cycle
+        if (l3==0) cycle
         if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
         if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
         if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
