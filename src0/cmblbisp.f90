@@ -189,8 +189,7 @@ subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
 end subroutine prep_lens_aps
 
 
-subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,z,Dz,knl,nef,dnq,PE,Ik,model,btype,ltype,lambda,kappa)
-!subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,Dz,knl,model,btype,ltype,lambda,kappa)
+subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,h,ns,s0,z,Dz,knl,nef,dnq,PE,Ik,model,btype,ltype,lambda,kappa)
 ! lensing bispectrum
   implicit none
   !I/O
@@ -202,7 +201,7 @@ subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,z,Dz,knl,nef,dnq,P
   character(*), intent(in), optional :: model, btype, ltype
   integer, intent(in), optional :: l0
   !double precision, intent(in), optional :: ns, s0, Dz(:), knl(:), lambda(:), kappa(:)
-  double precision, intent(in), optional :: ns, s0, z(:), Dz(:), knl(:), nef(:), dnq(:), PE(:,:), Ik(:,:), lambda(:), kappa(:)
+  double precision, intent(in), optional :: h, ns, s0, z(:), Dz(:), knl(:), nef(:), dnq(:), PE(:,:), Ik(:,:), lambda(:), kappa(:)
   !internal
   character(8) :: b='', lt='', m=''
   integer :: l, i, zn, l1, l2, l3
@@ -255,25 +254,22 @@ subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,z,Dz,knl,nef,dnq,P
 
     case ('lss') !LSS bispectrum
 
-      !do i = 1, zn
-      do i = 1, 1
+      do i = 1, zn
         if (m=='RT') then
           call F2_Kernel(k(i,[l1,l2,l3]),abc(:,i,l1),abc(:,i,l2),F2(1))
           call F2_Kernel(k(i,[l2,l3,l1]),abc(:,i,l2),abc(:,i,l3),F2(2))
           call F2_Kernel(k(i,[l3,l1,l2]),abc(:,i,l3),abc(:,i,l1),F2(3))
-          !if (z(i)<10d0) then
-            !call RTformula_1h(k(i,[l1,l2,l3])/knl(i),ns,s0*Dz(i),nef(i),bk)
-            bk = 0d0
-            bk = bk + 2d0*Ik(i,l1)*Ik(i,l2)*Ik(i,l3)*((F2(1)+dnq(i)*k(i,l3)/knl(i))*PE(i,l1)*PE(i,l2) + (F2(2)+dnq(i)*k(i,l1)/knl(i))*PE(i,l2)*PE(i,l3) + (F2(3)+dnq(i)*k(i,l2)/knl(i))*PE(i,l3)*PE(i,l1))
-          !else
-            !bk = 2d0*(F2(1)*Pl(1,i,l1)*Pl(1,i,l2) + F2(2)*Pl(1,i,l2)*Pl(1,i,l3) + F2(3)*Pl(1,i,l3)*Pl(1,i,l1))
-          !end if
+          if (z(i)<9d0) then
+            call RTformula_1h(k(i,[l1,l2,l3])/knl(i),ns,s0*Dz(i),nef(i),bk)
+            bk = bk/h**6 + 2d0*Ik(i,l1)*Ik(i,l2)*Ik(i,l3)*((F2(1)+dnq(i)*k(i,l3)/knl(i))*PE(i,l1)*PE(i,l2) + (F2(2)+dnq(i)*k(i,l1)/knl(i))*PE(i,l2)*PE(i,l3) + (F2(3)+dnq(i)*k(i,l2)/knl(i))*PE(i,l3)*PE(i,l1))
+          else
+            bk = 2d0*(F2(1)*Pl(1,i,l1)*Pl(1,i,l2) + F2(2)*Pl(1,i,l2)*Pl(1,i,l3) + F2(3)*Pl(1,i,l3)*Pl(1,i,l1))
+          end if
         else
           fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
           call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
         end if
-        !bl(l) = bl(l) + fac(i) * bk
-        bl(l) = bl(l) + bk
+        bl(l) = bl(l) + fac(i) * bk
       end do
 
     case default
@@ -293,7 +289,7 @@ subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,z,Dz,knl,nef,dnq,P
 end subroutine bispec_lens
 
 
-subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
+subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,h,ns,s0,z,Dz,knl,nef,dnq,PE,Ik,m,btype,bl)
 ! reduced bispectrum with flat binning
   ![input]
   ! btype -- lss or pbn
@@ -309,14 +305,14 @@ subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
   implicit none
   character(*), intent(in) :: btype, m
   integer, intent(in) :: eL1(2), eL2(2), eL3(2)
-  double precision, intent(in) :: k(:,:), Pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+  double precision, intent(in) :: k(:,:), Pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:), h, ns, s0, z(:), nef(:), dnq(:), PE(:,:), Ik(:,:)
 
   ! bl    -- result of binned bispectrum
   double precision, intent(out) :: bl
 
   ![internal]
   integer :: l1, l2, l3, i, zn
-  double precision :: norm, bisp, hlll, tot, bk, fh(3)
+  double precision :: norm, bisp, hlll, tot, bk, fh(3), F2(3)
 
   zn = size(k,dim=1)
 
@@ -338,10 +334,29 @@ subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
         !compute F2 kernel at each z, and take sum
         select case(btype)
         case ('lss')
+
           do i = 1, zn
-            fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
-            call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+
+            if (m=='RT') then
+              call F2_Kernel(k(i,[l1,l2,l3]),abc(:,i,l1),abc(:,i,l2),F2(1))
+              call F2_Kernel(k(i,[l2,l3,l1]),abc(:,i,l2),abc(:,i,l3),F2(2))
+              call F2_Kernel(k(i,[l3,l1,l2]),abc(:,i,l3),abc(:,i,l1),F2(3))
+              if (z(i)<9d0) then
+                call RTformula_1h(k(i,[l1,l2,l3])/knl(i),ns,s0*Dz(i),nef(i),bk)
+                bk = bk/h**6 + 2d0*Ik(i,l1)*Ik(i,l2)*Ik(i,l3)*((F2(1)+dnq(i)*k(i,l3)/knl(i))*PE(i,l1)*PE(i,l2) + (F2(2)+dnq(i)*k(i,l1)/knl(i))*PE(i,l2)*PE(i,l3) + (F2(3)+dnq(i)*k(i,l2)/knl(i))*PE(i,l3)*PE(i,l1))
+              else
+                bk = 2d0*(F2(1)*Pl(1,i,l1)*Pl(1,i,l2) + F2(2)*Pl(1,i,l2)*Pl(1,i,l3) + F2(3)*Pl(1,i,l3)*Pl(1,i,l1))
+              end if
+
+            else
+
+              fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
+              call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+
+            end if
+
             bisp = bisp + fac(i) * bk
+
           end do
         case ('pbn')
           call bispec_postborn(l1,l2,l3,wp,ck,bisp)
@@ -690,9 +705,9 @@ subroutine RTformula_1h(q,ns,sigma8,n_eff,bk)
 end subroutine RTformula_1h
 
 
-subroutine RTformula_3h_funcs(q,om,sigma8,n_eff,Plin,Ik,PE,dnq)
+subroutine RTformula_3h_funcs(q,h,om,sigma8,n_eff,Plin,Ik,PE,dnq)
   implicit none
-  double precision, intent(in)  :: q(:), om, sigma8, n_eff, Plin(:)
+  double precision, intent(in)  :: q(:), h, om, sigma8, n_eff, Plin(:)
   double precision, intent(out) :: PE(:), IK(:), dnq
   integer :: ki
   double precision :: fn, gn, hn, mn, nn, mun, nun, pn, dn, en
@@ -720,11 +735,12 @@ subroutine RTformula_3h_funcs(q,om,sigma8,n_eff,Plin,Ik,PE,dnq)
   en  = 10d0**en
 
   do ki = 1, size(PE)
-    PE(ki) = (1d0+fn*q(ki)**2)/(1d0+gn*q(ki)+hn*q(ki)**2)*Plin(ki) + 1d0/(mn*q(ki)**mun+nn*q(ki)**nun)*1d0/(1d0+1d0/(pn*q(ki))**3)
+    PE(ki) = (1d0+fn*q(ki)**2)/(1d0+gn*q(ki)+hn*q(ki)**2)*Plin(ki) + (1d0/h**3)/(mn*q(ki)**mun+nn*q(ki)**nun) * 1d0/(1d0+1d0/(pn*q(ki))**3)
     Ik(ki) = 1d0/(1d0+en*q(ki))
   end do
 
   dnq = dn
+
 
 end subroutine RTformula_3h_funcs
 

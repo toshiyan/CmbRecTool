@@ -607,7 +607,7 @@ subroutine find_pknl_params(k,plin,rknl,rneff,rncur,nonlinear)
     call wint(k,plin,rmid,sig,d1,d2)
     diff = sig-1.0
     if (abs(diff).le.0.001) then
-      rknl = 1./rmid
+      rknl  = 1./rmid
       rneff = -3-d1
       rncur = -d2   
       exit
