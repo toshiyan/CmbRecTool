@@ -59,7 +59,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   zn = size(z)  !number of z points for z-integral
   kn = size(ki) !number of CAMB output k
 
-  if (model/='TR'.and.model/='SC'.and.model/='GM'.and.model/='3B') stop 'error (prep_lens_bispectrum): your model is not supported'
+  if (model/='TR'.and.model/='SC'.and.model/='GM'.and.model/='3B'.and.model/='RT') stop 'error (prep_lens_bispectrum): your model is not supported'
 
   !* get distances and lensing weights
   allocate(Hz(zn),chi(zn),D(zn),wlf(zn),pklini(zn,kn),pki(zn,kn))
@@ -107,7 +107,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
 
   !* sigma_8
   if (present(s0)) then
-    s0 = dsqrt(pk2sigma(8d0/h,ki,pklini(1,:)))
+    s0 = dsqrt(pk2sigma(8d0/h,ki,pklin0))
     write(*,*) 'sigma8 = ', s0
   end if
 
@@ -189,7 +189,8 @@ subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
 end subroutine prep_lens_aps
 
 
-subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,Dz,knl,nef,dnq,PE,Ik,model,btype,ltype,lambda,kappa)
+subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,z,Dz,knl,nef,dnq,PE,Ik,model,btype,ltype,lambda,kappa)
+!subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,Dz,knl,model,btype,ltype,lambda,kappa)
 ! lensing bispectrum
   implicit none
   !I/O
@@ -200,7 +201,8 @@ subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,Dz,knl,nef,dnq,PE,
   !optional
   character(*), intent(in), optional :: model, btype, ltype
   integer, intent(in), optional :: l0
-  double precision, intent(in), optional :: ns, s0, Dz(:), knl(:), nef(:), dnq(:), PE(:,:), Ik(:,:), lambda(:), kappa(:)
+  !double precision, intent(in), optional :: ns, s0, Dz(:), knl(:), lambda(:), kappa(:)
+  double precision, intent(in), optional :: ns, s0, z(:), Dz(:), knl(:), nef(:), dnq(:), PE(:,:), Ik(:,:), lambda(:), kappa(:)
   !internal
   character(8) :: b='', lt='', m=''
   integer :: l, i, zn, l1, l2, l3
@@ -253,18 +255,25 @@ subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,ns,s0,Dz,knl,nef,dnq,PE,
 
     case ('lss') !LSS bispectrum
 
-      do i = 1, zn
+      !do i = 1, zn
+      do i = 1, 1
         if (m=='RT') then
-          call RTformula_1h(k(i,[l1,l2,l3]),ns,s0*Dz(i),nef(i),bk)
           call F2_Kernel(k(i,[l1,l2,l3]),abc(:,i,l1),abc(:,i,l2),F2(1))
           call F2_Kernel(k(i,[l2,l3,l1]),abc(:,i,l2),abc(:,i,l3),F2(2))
           call F2_Kernel(k(i,[l3,l1,l2]),abc(:,i,l3),abc(:,i,l1),F2(3))
-          bk = bk + 2d0*Ik(i,l1)*Ik(i,l2)*Ik(i,l3)*((F2(1)+dnq(i)*k(i,l3))*PE(i,l1)*PE(i,l2) + (F2(2)+dnq(i)*k(i,l1))*PE(i,l2)*PE(i,l3) + (F2(3)+dnq(i)*k(i,l2))*PE(i,l3)*PE(i,l1))
+          !if (z(i)<10d0) then
+            !call RTformula_1h(k(i,[l1,l2,l3])/knl(i),ns,s0*Dz(i),nef(i),bk)
+            bk = 0d0
+            bk = bk + 2d0*Ik(i,l1)*Ik(i,l2)*Ik(i,l3)*((F2(1)+dnq(i)*k(i,l3)/knl(i))*PE(i,l1)*PE(i,l2) + (F2(2)+dnq(i)*k(i,l1)/knl(i))*PE(i,l2)*PE(i,l3) + (F2(3)+dnq(i)*k(i,l2)/knl(i))*PE(i,l3)*PE(i,l1))
+          !else
+            !bk = 2d0*(F2(1)*Pl(1,i,l1)*Pl(1,i,l2) + F2(2)*Pl(1,i,l2)*Pl(1,i,l3) + F2(3)*Pl(1,i,l3)*Pl(1,i,l1))
+          !end if
         else
           fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
           call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
         end if
-        bl(l) = bl(l) + fac(i) * bk
+        !bl(l) = bl(l) + fac(i) * bk
+        bl(l) = bl(l) + bk
       end do
 
     case default
@@ -579,16 +588,16 @@ subroutine F2_Kernel(k,abc1,abc2,F2,lambda,kappa)
   double precision, intent(out) :: F2
   double precision, intent(in), optional :: lambda, kappa
   !internal
-  double precision :: cost, lam, kap
+  double precision :: ct, lam, kap
 
   !MG extension
   lam = 1d0; kap=1d0
-  if (present(lambda)) lam=lambda
-  if (present(kappa))  kap=kappa
+  if (present(lambda))  lam = lambda
+  if (present(kappa))   kap = kappa
 
   !Kernel
-  cost = (k(3)**2-k(1)**2-k(2)**2)/(2d0*k(1)*k(2)) !cos(theta) of vectors k1 and k2
-  F2   = (kap-lam*2d0/7d0)*abc1(1)*abc2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*cost*abc1(2)*abc2(2) + lam*2d0/7d0*cost**2*abc1(3)*abc2(3)
+  ct = (k(3)**2-k(1)**2-k(2)**2)/(2d0*k(1)*k(2)) !cos(theta) of vectors k1 and k2
+  F2 = (kap-lam*2d0/7d0)*abc1(1)*abc2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*ct*abc1(2)*abc2(2) + lam*2d0/7d0*ct**2*abc1(3)*abc2(3)
 
 end subroutine F2_Kernel
 
@@ -834,41 +843,6 @@ subroutine get_knl(k,PkL,knl)
   end do
 
 end subroutine get_knl
-
-
-subroutine get_knl_exp(k,PkL,knl,knli)
-! get k_NL
-  implicit none
-  double precision, intent(in) :: k(:), PkL(:,:)
-  double precision, intent(out) :: knl(:)
-  integer, intent(out) :: knli(:)
-  integer :: kn, zn, i, j
-  double precision :: f, isum
-  double precision, allocatable :: dk(:)
-
-  kn = size(k)
-  zn = size(PkL,dim=1)
-  allocate(dk(kn)); dk=0d0
-  do j = 1, kn-1
-    dk(j) = k(j+1)-k(j)
-  end do
-
-  do i = 1, zn
-    do j = 1, kn
-      isum = sum(dexp(-k(1:j)**2/k(j)**2)*PkL(i,1:j)*k(1:j)**2*dk(1:j))/(2d0*pi**2)
-      if ( isum > 1d0 ) then
-        goto 11
-      else
-        knl(i)  = k(j)
-        knli(i) = j
-      end if
-    end do
-11  continue
-  end do
-  
-  deallocate(dk)
-
-end subroutine get_knl_exp
 
 
 subroutine get_neff(k,kl,plin,n,model)
