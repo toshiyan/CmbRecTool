@@ -545,6 +545,46 @@ function snr_xbisp(eL,k,Pl,cgg,ckk,fac,abc,wp,ck,btype,Dz,knl,m)  result(f)
 end function snr_xbisp
 
 
+subroutine bispec_matter(k,Pk,abc,bk,fh,model)
+  implicit none
+  !input
+  double precision, intent(in) :: k(3), Pk(2,3), abc(3,3)
+  double precision, intent(in), optional :: fh(3)
+  character(*), intent(in), optional :: model
+  !output
+  double precision, intent(out) :: bk
+  !internal
+  integer :: i
+  character(16) :: m = ''
+  double precision :: F2(3), p(3), PE(3)
+
+  if (present(model)) m = model
+  if (m/=''.and..not.present(fh)) stop 'error (bispec_matter): fh is required'
+
+  select case(m)
+  case('3B')
+
+    !p(1) = dsqrt( 7d0/10d0 * (1d0+3d0/7d0*1.008d0) )
+    !p(3) = dsqrt( 7d0/4d0 * (1d0-3d0/7d0*1.008d0) )
+    p(1) = 1.0011993d0 !Om^{-1/143} ~ 1.008
+    p(2) = 1d0
+    p(3) = 0.9969955d0
+    call F2_Kernel(k([1,2,3]),p,p,F2(1))
+    call F2_Kernel(k([2,3,1]),p,p,F2(2))
+    call F2_Kernel(k([3,1,2]),p,p,F2(3))
+    bk = fh(1) + fh(2)*(Pk(1,1)*Pk(1,2)+Pk(1,2)*Pk(1,3)+Pk(1,3)*Pk(1,1))/3d0 + fh(3)*2d0*(F2(1)*Pk(2,1)*Pk(2,2)+F2(2)*Pk(2,2)*Pk(2,3)+F2(3)*Pk(2,3)*Pk(2,1))
+
+  case default
+
+    call F2_Kernel(k([1,2,3]),abc(:,1),abc(:,2),F2(1))
+    call F2_Kernel(k([2,3,1]),abc(:,2),abc(:,3),F2(2))
+    call F2_Kernel(k([3,1,2]),abc(:,3),abc(:,1),F2(3))
+    bk = 2d0*(F2(1)*Pk(2,1)*Pk(2,2) + F2(2)*Pk(2,2)*Pk(2,3) + F2(3)*Pk(2,3)*Pk(2,1))
+
+  end select
+
+end subroutine bispec_matter
+
 
 subroutine Limber_k2l(chi,k,Pk,kl,Pl)
 ! get k and P(k) at k=l/chi
@@ -615,47 +655,6 @@ subroutine F2_Kernel(k,abc1,abc2,F2,lambda,kappa)
   F2 = (kap-lam*2d0/7d0)*abc1(1)*abc2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*ct*abc1(2)*abc2(2) + lam*2d0/7d0*ct**2*abc1(3)*abc2(3)
 
 end subroutine F2_Kernel
-
-
-subroutine bispec_matter(k,Pk,abc,bk,fh,model)
-  implicit none
-  !input
-  double precision, intent(in) :: k(3), Pk(2,3), abc(3,3)
-  double precision, intent(in), optional :: fh(3)
-  character(*), intent(in), optional :: model
-  !output
-  double precision, intent(out) :: bk
-  !internal
-  integer :: i
-  character(16) :: m = ''
-  double precision :: F2(3), p(3), PE(3)
-
-  if (present(model)) m = model
-  if (m/=''.and..not.present(fh)) stop 'error (bispec_matter): fh is required'
-
-  select case(m)
-  case('3B')
-
-    !p(1) = dsqrt( 7d0/10d0 * (1d0+3d0/7d0*1.008d0) )
-    !p(3) = dsqrt( 7d0/4d0 * (1d0-3d0/7d0*1.008d0) )
-    p(1) = 1.0011993d0 !Om^{-1/143} ~ 1.008
-    p(2) = 1d0
-    p(3) = 0.9969955d0
-    call F2_Kernel(k([1,2,3]),p,p,F2(1))
-    call F2_Kernel(k([2,3,1]),p,p,F2(2))
-    call F2_Kernel(k([3,1,2]),p,p,F2(3))
-    bk = fh(1) + fh(2)*(Pk(1,1)*Pk(1,2)+Pk(1,2)*Pk(1,3)+Pk(1,3)*Pk(1,1))/3d0 + fh(3)*2d0*(F2(1)*Pk(2,1)*Pk(2,2)+F2(2)*Pk(2,2)*Pk(2,3)+F2(3)*Pk(2,3)*Pk(2,1))
-
-  case default
-
-    call F2_Kernel(k([1,2,3]),abc(:,1),abc(:,2),F2(1))
-    call F2_Kernel(k([2,3,1]),abc(:,2),abc(:,3),F2(2))
-    call F2_Kernel(k([3,1,2]),abc(:,3),abc(:,1),F2(3))
-    bk = 2d0*(F2(1)*Pk(2,1)*Pk(2,2) + F2(2)*Pk(2,2)*Pk(2,3) + F2(3)*Pk(2,3)*Pk(2,1))
-
-  end select
-
-end subroutine bispec_matter
 
 
 subroutine RTformula_1h(q,ns,sigma8,n_eff,bk)
