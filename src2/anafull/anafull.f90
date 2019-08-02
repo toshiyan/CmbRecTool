@@ -9,7 +9,7 @@ module anafull
   use pix_tools, only: pix2ang_ring, ang2pix_ring
   !* my modules
   use myrandom, only: InitRandom, Gaussian1
-  use myconst, only: dl, dlc, pi, iu
+  use myconst, only: pi, iu
   use myutils, only: str
 
   implicit none
@@ -18,7 +18,7 @@ module anafull
   private alm2map, alm2map_spin, map2alm, map2alm_spin, alm2map_der
   private input_map, output_map
   private pix2ang_ring, ang2pix_ring
-  private dl, dlc, pi, iu
+  private pi, iu
   private str
 
 contains
@@ -28,8 +28,8 @@ subroutine gaussianalm(alm,Cl,lmax)
   implicit none
   !I/O
   integer, intent(in) :: lmax
-  real(dl), intent(in) :: Cl(:)
-  complex(dlc), intent(out) :: alm(0:lmax,0:lmax)
+  double precision, intent(in) :: Cl(:)
+  double complex, intent(out) :: alm(0:lmax,0:lmax)
   !internal
   integer :: l,m
   
@@ -51,11 +51,11 @@ subroutine gaussianTE(alm,TT,EE,TE,lmax)
   implicit none
   !I/O
   integer, intent(in) :: lmax
-  real(dl), intent(in) :: TT(:), EE(:), TE(:)
-  complex(dlc), intent(out) :: alm(2,0:lmax,0:lmax)
+  double precision, intent(in) :: TT(:), EE(:), TE(:)
+  double complex, intent(out) :: alm(2,0:lmax,0:lmax)
   !internal
   integer :: l, m
-  real(dl) :: tamp, corr, xamp
+  double precision :: tamp, corr, xamp
 
   alm = 0
   call gaussianalm(alm(1,:,:),TT,lmax)
@@ -82,11 +82,11 @@ subroutine gaussianTEB(alm,TT,EE,BB,TE,lmax)
   implicit none
   !I/O
   integer, intent(in) :: lmax
-  real(dl), intent(in) :: TT(:), EE(:), BB(:), TE(:)
-  complex(dlc), intent(out) :: alm(3,0:lmax,0:lmax)
+  double precision, intent(in) :: TT(:), EE(:), BB(:), TE(:)
+  double complex, intent(out) :: alm(3,0:lmax,0:lmax)
   !internal
   integer :: l, m
-  real(dl) :: tamp, corr, xamp
+  double precision :: tamp, corr, xamp
 
   alm = 0
   call gaussianalm(alm(1,:,:),TT,lmax)
@@ -113,8 +113,8 @@ subroutine gaussianEB(alm,Cl,lmax)
   implicit none
   !I/O
   integer, intent(in) :: lmax
-  real(dl), intent(in) :: Cl(:,:)
-  complex(dlc), intent(out) :: alm(2,0:lmax,0:lmax)
+  double precision, intent(in) :: Cl(:,:)
+  double complex, intent(out) :: alm(2,0:lmax,0:lmax)
 
   if(size(Cl,dim=1)<2) stop 'need more Cls'
   call gaussianalm(alm(1,:,:),Cl(1,:),lmax)
@@ -128,9 +128,9 @@ subroutine addnoiseEB(alm,Nl,lmax)
   !I/O
   integer, intent(in) :: lmax
   double precision, intent(in) :: Nl(:)
-  complex(dlc), intent(inout), dimension(2,0:lmax,0:lmax) :: alm
+  double complex, intent(inout), dimension(2,0:lmax,0:lmax) :: alm
   !internal
-  complex(dlc) :: nlm(0:lmax,0:lmax)
+  double complex :: nlm(0:lmax,0:lmax)
 
   call gaussianalm(nlm,Nl,lmax)
   alm(1,:,:) = alm(1,:,:) + nlm(:,:)
@@ -144,9 +144,9 @@ subroutine addnoisealm(alm,Nl,lmax)
   !I/O
   integer, intent(in) :: lmax
   double precision, intent(in) :: Nl(:)
-  complex(dlc), intent(inout) :: alm(0:lmax,0:lmax)
+  double complex, intent(inout) :: alm(0:lmax,0:lmax)
   !internal
-  complex(dlc) :: nlm(0:lmax,0:lmax)
+  double complex :: nlm(0:lmax,0:lmax)
 
   call gaussianalm(nlm,Nl,lmax)
   alm = alm + nlm
@@ -158,7 +158,7 @@ subroutine read_maps(map,f)
   implicit none
   !I/O
   character(*), intent(in) :: f(:)
-  real(dl), intent(out) :: map(:,:)
+  double precision, intent(out) :: map(:,:)
   !internal
   integer :: i, nmap, npix
 
@@ -179,9 +179,9 @@ subroutine read_map(npix,map,f)
   !I/O
   integer, intent(in) :: npix
   character(*), intent(in) :: f
-  real(dl), intent(out) :: map(0:npix-1)
+  double precision, intent(out) :: map(0:npix-1)
   !internal
-  real(dl), allocatable, dimension(:,:) :: imap
+  double precision, allocatable, dimension(:,:) :: imap
 
   allocate(imap(0:npix-1,1))
   call INPUT_MAP(f,imap,npix,1)
@@ -198,12 +198,12 @@ subroutine read_qumap(npix,Pobs,root,simn,amp,add,pf)
   character(*), intent(in), optional :: pf
   logical, intent(in), optional :: add
   integer, intent(in), optional :: simn
-  real(dl), intent(in), optional :: amp
+  double precision, intent(in), optional :: amp
   integer, intent(in) :: npix
-  real(dl), intent(inout) :: Pobs(0:npix-1,2)
+  double precision, intent(inout) :: Pobs(0:npix-1,2)
   !internal
   character(LEN=64) :: f, fs(2)
-  real(dl), allocatable, dimension(:,:) :: map
+  double precision, allocatable, dimension(:,:) :: map
 
   if(.not.(present(amp).and.amp==0d0)) then
     allocate(map(0:npix-1,2))
@@ -231,12 +231,12 @@ subroutine READ_TMAP(Tobs,root,simn,amp,add,pf)
   character(*), intent(in), optional :: pf
   logical, intent(in), optional :: add
   integer, intent(in), optional :: simn
-  real(dl), intent(in), optional :: amp
-  real(dl), intent(inout) :: Tobs(:)
+  double precision, intent(in), optional :: amp
+  double precision, intent(inout) :: Tobs(:)
   !internal
   integer :: npix
   character(LEN=64) :: f
-  real(dl), allocatable, dimension(:) :: map
+  double precision, allocatable, dimension(:) :: map
 
   npix = size(Tobs)
   if(.not.(present(amp).and.amp==0d0)) then
@@ -261,11 +261,11 @@ subroutine output_alm2map(f,ialm,lmax,nside)
   !I/O
   character(*), intent(in) :: f
   integer, intent(in) :: lmax, nside
-  complex(dlc), intent(in) :: ialm(0:lmax,0:lmax)
+  double complex, intent(in) :: ialm(0:lmax,0:lmax)
   !internal
   character(80) :: header(10)
-  real(dl) :: map(0:12*nside**2-1,1)
-  complex(dlc) :: alm(1,0:lmax,0:lmax)
+  double precision :: map(0:12*nside**2-1,1)
+  double complex :: alm(1,0:lmax,0:lmax)
 
   header = ' '
   alm(1,:,:) = ialm
@@ -280,10 +280,10 @@ subroutine map_output(npix,f,imap)
   !I/O
   integer, intent(in) :: npix
   character(*), intent(in) :: f
-  real(dl), intent(in) :: imap(0:npix-1)
+  double precision, intent(in) :: imap(0:npix-1)
   !internal
   character(80) :: header(10)
-  real(dl) :: map(0:npix-1,1)
+  double precision :: map(0:npix-1,1)
 
   header = ' '
   map(:,1) = imap
@@ -298,7 +298,7 @@ subroutine map_output_p(npix,P,simn,pf)
   character(*), intent(in), optional :: pf
   integer, intent(in) :: npix
   integer, intent(in), optional :: simn
-  real(dl), intent(in) :: P(0:npix-1,2)
+  double precision, intent(in) :: P(0:npix-1,2)
   !internal
   character(LEN=32) :: f
 
@@ -320,7 +320,7 @@ subroutine SIM_QUMAP(Pmap,Cl,lmax,nside)
   !internal
   integer :: npix
   double precision, allocatable, dimension(:,:) :: map
-  complex(dlc), allocatable, dimension(:,:,:) :: alm
+  double complex, allocatable, dimension(:,:,:) :: alm
 
   npix = size(Pmap,dim=1)
 
@@ -342,7 +342,7 @@ subroutine SIM_QUMAP_NOISE(Pmap,Nl,lmax,nside)
   double precision, intent(inout) :: Pmap(:,:)
   !internal
   integer :: npix
-  complex(dlc), allocatable, dimension(:,:,:) :: alm
+  double complex, allocatable, dimension(:,:,:) :: alm
 
   npix = size(Pmap,dim=1)
 
@@ -458,10 +458,10 @@ subroutine cmplxmap2alm_spin(nside,lmax,mmax,spin,map,alm)
   implicit none
   !I/O
   integer, intent(in) :: nside, lmax, mmax, spin
-  complex(dlc), intent(in) :: map(0:12*nside**2-1)
-  complex(dlc), intent(out) :: alm(2,0:lmax,0:mmax)
+  double complex, intent(in) :: map(0:12*nside**2-1)
+  double complex, intent(out) :: alm(2,0:lmax,0:mmax)
   !internal
-  real(dl) :: S(0:12*nside**2-1,2)
+  double precision :: S(0:12*nside**2-1,2)
 
   S(:,1) = real(map)
   S(:,2) = aimag(map)
@@ -474,10 +474,10 @@ subroutine alm_to_map(nside,lmax,mmax,alm,map)
   implicit none
   !I/O
   integer, intent(in) :: nside, lmax, mmax
-  real(dl), intent(out) :: map(0:12*nside**2-1)
-  complex(dlc), intent(in) :: alm(0:lmax,0:lmax)
+  double precision, intent(out) :: map(0:12*nside**2-1)
+  double complex, intent(in) :: alm(0:lmax,0:lmax)
   !internal
-  complex(dlc) :: tlm(1,0:lmax,0:lmax)
+  double complex :: tlm(1,0:lmax,0:lmax)
 
   tlm(1,:,:) = alm
   call alm2map(nside,lmax,mmax,tlm,map)
@@ -488,8 +488,8 @@ end subroutine alm_to_map
 function cosin_healpix(nside,lmax,mmax) result(cosin)
   implicit none
   integer, intent(in) :: nside, lmax, mmax
-  complex(dlc) :: alm(1,0:lmax,0:mmax)
-  real(dl) :: cosin(0:12*nside**2-1)
+  double complex :: alm(1,0:lmax,0:mmax)
+  double precision :: cosin(0:12*nside**2-1)
 
   alm = 0d0
   alm(1,1,0) = 1d0
@@ -507,11 +507,11 @@ subroutine elm2map_spin(nside,lmax,mmax,spin,Elm,map)
   implicit none
   !I/O
   integer, intent(in) :: nside, lmax, mmax, spin
-  complex(dlc), intent(in) :: Elm(0:lmax,0:mmax)
-  complex(dlc), intent(out) :: map(0:12*nside**2-1)
+  double complex, intent(in) :: Elm(0:lmax,0:mmax)
+  double complex, intent(out) :: map(0:12*nside**2-1)
   !internal
-  real(dl) :: S(0:12*nside**2-1,2)
-  complex(dlc) :: alm(2,0:lmax,0:mmax)
+  double precision :: S(0:12*nside**2-1,2)
+  double complex :: alm(2,0:lmax,0:mmax)
 
   alm(1,:,:) = Elm
   alm(2,:,:) = 0d0 ! Blm = 0
@@ -528,11 +528,11 @@ subroutine blm2map_spin(nside,lmax,mmax,spin,Blm,map)
   implicit none
   !I/O
   integer, intent(in) :: nside, lmax, mmax, spin
-  complex(dlc), intent(in) :: Blm(0:lmax,0:mmax)
-  complex(dlc), intent(out) :: map(0:12*nside**2-1)
+  double complex, intent(in) :: Blm(0:lmax,0:mmax)
+  double complex, intent(out) :: map(0:12*nside**2-1)
   !internal
-  real(dl) :: S(0:12*nside**2-1,2)
-  complex(dlc) :: alm(2,0:lmax,0:mmax)
+  double precision :: S(0:12*nside**2-1,2)
+  double complex :: alm(2,0:lmax,0:mmax)
 
   alm(1,:,:) = 0d0
   alm(2,:,:) = Blm
@@ -546,12 +546,12 @@ subroutine pureEB_full(nside,npix,lmax,Pobs,W0)
   implicit none
   !I/O
   integer, intent(in) :: nside, npix, lmax
-  real(dl), intent(inout) :: Pobs(0:npix-1,2),W0(0:npix-1,2)
+  double precision, intent(inout) :: Pobs(0:npix-1,2),W0(0:npix-1,2)
   !internal
   integer :: i, l
-  real(dl) :: al, n1, n2, pd
-  real(dl), allocatable, dimension(:,:) :: W1,W2,P1,P0
-  complex(dlc), allocatable, dimension(:,:,:) :: alm1, alm2, wlm, tlm
+  double precision :: al, n1, n2, pd
+  double precision, allocatable, dimension(:,:) :: W1,W2,P1,P0
+  double complex, allocatable, dimension(:,:,:) :: alm1, alm2, wlm, tlm
 
   !derivatives of window functions in harmonic space
   allocate(wlm(2,0:lmax,0:lmax))
@@ -620,7 +620,7 @@ subroutine CHI_FIELD(nside,npix,lmax,Pobs,W0)
   integer :: i, l
   double precision :: al, n1, n2, pd
   double precision, allocatable, dimension(:,:) :: P2,chi
-  complex(dlc), allocatable, dimension(:,:,:) :: alm,tlm
+  double complex, allocatable, dimension(:,:,:) :: alm,tlm
 
   allocate(P2(0:npix-1,2))
   P2 = Pobs
