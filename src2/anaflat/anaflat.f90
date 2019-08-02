@@ -22,10 +22,6 @@ module anaflat
     module procedure gaussian_alm_1darray, gaussian_alm_2darray
   end interface Gaussian_alm
 
-  interface fourier_filter
-    module procedure fourier_filter_1d, fourier_filter_2d
-  end interface fourier_filter
-
   private InitRandom, ranmar, gaussian1
   private dlc, iu, pi
   private filelines, savetxt, loadtxt
