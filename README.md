@@ -2,12 +2,9 @@
 
 The Library has been written by Fortran90 to reconstruct lensing potential, cosmic bi-refrimgence, and patchy reionization from cosmic microwave background anisotropies (CMB) in full and flat sky. The Library also includes subrotuines for delensing, bi-spectrum calculation, and so on. Installing this library at NERSC is straightforward, but the library also works at other environment. 
 
-# Current development
+Python modules are also available at https://github.com/toshiyan/cmblensplus
 
-  - A python wrapper is now developing. 
-  - Some example codes for RDN0 will be uploaded. 
-
-# Installation for Fortran90 user
+# Installation
 
   0) The code assumes "ifort" (intel fortran compiler) as a fortran compiler. 
 

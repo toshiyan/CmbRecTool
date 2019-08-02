@@ -15,7 +15,7 @@ module cmblbisp
 contains
 
 
-subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype,pkout,knl,ftype)
+subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,btype,pkout,s0,knl,ftype)
 ! compute k and Pk at k=l/chi, factor (fac) for LSS bispectrum, F2-kernel coefficients (abc), 
 ! weighted potential spectrum (wp), and kappa spectrum at [chi,chi_s] (ck)
   implicit none
@@ -36,7 +36,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   ! pkout  --- output Pk data
   character(*), intent(in), optional :: btype, ftype
   integer, optional :: pkout
-  double precision, optional :: knl(:)
+  double precision, optional :: knl(:), s0
 
   ![output]
   ! kl, pl --- k and Pk (lin and nl) at k=l/chi
@@ -50,9 +50,8 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   !internal
   character(4) :: bisptype, fittype
   integer :: i, zn, kn
-  double precision :: s0, chis, h
+  double precision :: chis, h
   double precision, allocatable :: Hz(:), chi(:), D(:), wlf(:), pki(:,:), pklini(:,:)
-
 
   fittype = 'T12'
   if (present(ftype)) fittype = ftype
@@ -60,7 +59,7 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   zn = size(z)  !number of z points for z-integral
   kn = size(ki) !number of CAMB output k
 
-  if (model/='TR'.and.model/='SC'.and.model/='GM'.and.model/='3B') stop 'error (prep_lens_bispectrum): your model is not supported'
+  if (model/='TR'.and.model/='SC'.and.model/='GM'.and.model/='3B'.and.model/='RT') stop 'error (prep_lens_bispectrum): your model is not supported'
 
   !* get distances and lensing weights
   allocate(Hz(zn),chi(zn),D(zn),wlf(zn),pklini(zn,kn),pki(zn,kn))
@@ -107,12 +106,10 @@ subroutine prep_lens_bispectrum(z,dz,zs,cp,ki,pklin0,model,kl,pl,zker,abc,wp,ck,
   end if
 
   !* sigma_8
-  s0 = dsqrt(pk2sigma(8d0/h,ki,pklini(1,:)))
-  write(*,*) 'sigma8 = ', s0
-  !do i = 1, zn
-  !  wlf(i) = dsqrt(pk2sigma(8d0/h,ki,pklini(i,:)))
-  !end do
-  !call savetxt('sigmaz.dat',z,wlf)
+  if (present(s0)) then
+    s0 = dsqrt(pk2sigma(8d0/h,ki,pklin0))
+    write(*,*) 'sigma8 = ', s0
+  end if
 
   !* interpolate k, Pk at k=l/chi
   call Limber_k2l(chi,ki,pklini,kl,pl(1,:,:))
@@ -192,160 +189,23 @@ subroutine prep_lens_aps(z,dz,zs,cp,ki,pklin0,ck)
 end subroutine prep_lens_aps
 
 
-subroutine Limber_k2l(chi,k,Pk,kl,Pl)
-! get k and P(k) at k=l/chi
-  implicit none
-  double precision, intent(in) :: chi(:), k(:), Pk(:,:)
-  double precision, intent(out) :: kl(:,:), Pl(:,:)
-  integer :: i, l, zn, kn, ln, id
-  double precision :: kk
-  !double precision, allocatable :: y2a(:)
-
-  zn = size(Pk,dim=1) !num of z points
-  kn = size(Pk,dim=2) !num of k points
-  ln = size(kl,dim=2) !num of multipole
-
-  do i = 1, zn
-    !allocate(y2a(kn))
-    !call spline(k,Pk(i,:),kn,0d0,0d0,y2a)
-    do l = 1, ln
-      kk = dble(l)/chi(i)
-      id = neighb(kk,k) !look for neighberest points
-      kl(i,l) = kk
-      !* linear interpolation
-      Pl(i,l) = Pk(i,id) + (Pk(i,id+1)-Pk(i,id))*(kk-k(id))/(k(id+1)-k(id))
-      !Pl(i,l) = splint(kk,k(i),Pk(i,:),y2a)
-    end do
-    !deallocate(y2a)
-  end do
-
-end subroutine Limber_k2l
-
-
-function W3j_approx(l1,l2,l3) result(f)
-! approximate W3j symbol
-  implicit none
-  double precision, intent(in) :: l1,l2,l3
-  double precision :: a1,a2,a3,b,f,Lh
-
-  if (mod(int(l1+l2+l3),2)/=0) then 
-    f = 0d0
-  else
-    Lh = dble(l1+l2+l3)*0.5d0
-    a1 = ((Lh-l1+0.5d0)/(Lh-l1+1d0))**(Lh-l1+0.25d0)
-    a2 = ((Lh-l2+0.5d0)/(Lh-l2+1d0))**(Lh-l2+0.25d0)
-    a3 = ((Lh-l3+0.5d0)/(Lh-l3+1d0))**(Lh-l3+0.25d0)
-    b = 1d0/((Lh-l1+1d0)*(Lh-l2+1d0)*(Lh-l3+1d0))**(0.25d0)
-    f = (-1d0)**Lh/dsqrt(2d0*pi) * exp(1.5d0)* (Lh+1d0)**(-0.25d0) * a1*a2*a3*b
-  end if
-
-end function W3j_approx
-
-
-subroutine F2_Kernel(k,abc1,abc2,F2,lambda,kappa)
-! F2 kernel
-  implicit none
-  double precision, intent(in) :: k(3), abc1(3), abc2(3)
-  double precision, intent(out) :: F2
-  double precision, intent(in), optional :: lambda, kappa
-  !internal
-  double precision :: cost, lam, kap
-
-  !MG extension
-  lam = 1d0; kap=1d0
-  if (present(lambda)) lam=lambda
-  if (present(kappa))  kap=kappa
-
-  !Kernel
-  cost = (k(3)**2-k(1)**2-k(2)**2)/(2d0*k(1)*k(2)) !cos(theta) of vectors k1 and k2
-  F2   = (kap-lam*2d0/7d0)*abc1(1)*abc2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*cost*abc1(2)*abc2(2) + lam*2d0/7d0*cost**2*abc1(3)*abc2(3)
-
-end subroutine F2_Kernel
-
-
-subroutine bispec_matter(k,Pk,abc,bk,fh,model)
-  implicit none
-  !input
-  double precision, intent(in) :: k(3), Pk(2,3), abc(3,3)
-  double precision, intent(in), optional :: fh(3)
-  character(*), intent(in), optional :: model
-  !output
-  double precision, intent(out) :: bk
-  !internal
-  character(16) :: m = ''
-  double precision :: F2(3), p(3)
-
-  if (present(model)) m = model
-  if (m/=''.and..not.present(fh)) stop 'error (bispec_matter): fh is required'
-
-  select case(m)
-  case('3B')
-
-    !p(1) = dsqrt( 7d0/10d0 * (1d0+3d0/7d0*1.008d0) )
-    !p(3) = dsqrt( 7d0/4d0 * (1d0-3d0/7d0*1.008d0) )
-    p(1) = 1.0011993d0 !Om^{-1/143} ~ 1.008
-    p(2) = 1d0
-    p(3) = 0.9969955d0
-    call F2_Kernel(k([1,2,3]),p,p,F2(1))
-    call F2_Kernel(k([2,3,1]),p,p,F2(2))
-    call F2_Kernel(k([3,1,2]),p,p,F2(3))
-    bk = fh(1) + fh(2)*(Pk(1,1)*Pk(1,2)+Pk(1,2)*Pk(1,3)+Pk(1,3)*Pk(1,1))/3d0 + fh(3)*2d0*(F2(1)*Pk(2,1)*Pk(2,2)+F2(2)*Pk(2,2)*Pk(2,3)+F2(3)*Pk(2,3)*Pk(2,1))
-
-  case default
-
-    call F2_Kernel(k([1,2,3]),abc(:,1),abc(:,2),F2(1))
-    call F2_Kernel(k([2,3,1]),abc(:,2),abc(:,3),F2(2))
-    call F2_Kernel(k([3,1,2]),abc(:,3),abc(:,1),F2(3))
-    bk = 2d0*(F2(1)*Pk(2,1)*Pk(2,2) + F2(2)*Pk(2,2)*Pk(2,3) + F2(3)*Pk(2,3)*Pk(2,1))
-
-  end select
-
-
-end subroutine bispec_matter
-
-
-subroutine bispec_postborn(l1,l2,l3,wp,ck,bisp)
-! compute lensing bispectrum from post-Born correction
-  implicit none
-  !I/O
-  integer, intent(in) :: l1, l2, l3
-  double precision, intent(in) :: wp(:,:), ck(:,:)
-  double precision, intent(out) :: bisp
-  !internal
-  double precision :: al1, al2, al3, l1l2, l2l3, l3l1
-  
-  al1  = dble(l1)
-  al2  = dble(l2)
-  al3  = dble(l3)
-  l1l2 = al3**2-al1**2-al2**2 ! 2L1*L2
-  l2l3 = al1**2-al2**2-al3**2
-  l3l1 = al2**2-al3**2-al1**2
-
-  !Post-Born correction: Eq.(4.4) of PL16
-  !wPp = dchi * W^2(chi,chi_s)/chi^2 * P_psi 
-  bisp =        l1l2/(2d0*al1**2*al2**2)*(l3l1*al1**4*sum(wp(:,l1)*ck(:,l2))+l2l3*al2**4*sum(wp(:,l2)*ck(:,l1)))
-  bisp = bisp + l2l3/(2d0*al2**2*al3**2)*(l1l2*al2**4*sum(wp(:,l2)*ck(:,l3))+l3l1*al3**4*sum(wp(:,l3)*ck(:,l2)))
-  bisp = bisp + l3l1/(2d0*al3**2*al1**2)*(l2l3*al3**4*sum(wp(:,l3)*ck(:,l1))+l1l2*al1**4*sum(wp(:,l1)*ck(:,l3)))
-
-end subroutine bispec_postborn
-
-
-subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,Dz,knl,model,btype,ltype,lambda,kappa)
+subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,h,ns,s0,z,Dz,knl,nef,dnq,PE,Ik,model,btype,ltype,lambda,kappa)
 ! lensing bispectrum
   implicit none
   !I/O
   character(*), intent(in) :: shap
   integer, intent(in) :: eL(2)
-  double precision, intent(in) :: k(:,:), pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+  double precision, intent(in) :: k(:,:), pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:)
   double precision, intent(out) :: bl(:)
   !optional
   character(*), intent(in), optional :: model, btype, ltype
   integer, intent(in), optional :: l0
-  double precision, intent(in), optional :: lambda(:), kappa(:)
+  !double precision, intent(in), optional :: ns, s0, Dz(:), knl(:), lambda(:), kappa(:)
+  double precision, intent(in), optional :: h, ns, s0, z(:), Dz(:), knl(:), nef(:), dnq(:), PE(:,:), Ik(:,:), lambda(:), kappa(:)
   !internal
   character(8) :: b='', lt='', m=''
   integer :: l, i, zn, l1, l2, l3
-  double precision :: bk, fh(3)
+  double precision :: bk, fh(3), F2(3)
   double precision, allocatable :: lam(:), kap(:)
 
   ! initial set up
@@ -395,8 +255,20 @@ subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,Dz,knl,model,btype,ltype
     case ('lss') !LSS bispectrum
 
       do i = 1, zn
-        fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
-        call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+        if (m=='RT') then
+          call F2_Kernel(k(i,[l1,l2,l3]),abc(:,i,l1),abc(:,i,l2),F2(1))
+          call F2_Kernel(k(i,[l2,l3,l1]),abc(:,i,l2),abc(:,i,l3),F2(2))
+          call F2_Kernel(k(i,[l3,l1,l2]),abc(:,i,l3),abc(:,i,l1),F2(3))
+          if (z(i)<9d0) then
+            call RTformula_1h(k(i,[l1,l2,l3])/knl(i),ns,s0*Dz(i),nef(i),bk)
+            bk = bk/h**6 + 2d0*Ik(i,l1)*Ik(i,l2)*Ik(i,l3)*((F2(1)+dnq(i)*k(i,l3)/knl(i))*PE(i,l1)*PE(i,l2) + (F2(2)+dnq(i)*k(i,l1)/knl(i))*PE(i,l2)*PE(i,l3) + (F2(3)+dnq(i)*k(i,l2)/knl(i))*PE(i,l3)*PE(i,l1))
+          else
+            bk = 2d0*(F2(1)*Pl(1,i,l1)*Pl(1,i,l2) + F2(2)*Pl(1,i,l2)*Pl(1,i,l3) + F2(3)*Pl(1,i,l3)*Pl(1,i,l1))
+          end if
+        else
+          fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
+          call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+        end if
         bl(l) = bl(l) + fac(i) * bk
       end do
 
@@ -417,7 +289,7 @@ subroutine bispec_lens(shap,eL,k,pl,fac,abc,wp,ck,bl,l0,Dz,knl,model,btype,ltype
 end subroutine bispec_lens
 
 
-subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
+subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,h,ns,s0,z,Dz,knl,nef,dnq,PE,Ik,m,btype,bl)
 ! reduced bispectrum with flat binning
   ![input]
   ! btype -- lss or pbn
@@ -433,14 +305,14 @@ subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
   implicit none
   character(*), intent(in) :: btype, m
   integer, intent(in) :: eL1(2), eL2(2), eL3(2)
-  double precision, intent(in) :: k(:,:), Pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:)
+  double precision, intent(in) :: k(:,:), Pl(:,:,:), fac(:), abc(:,:,:), wp(:,:), ck(:,:), Dz(:), knl(:), h, ns, s0, z(:), nef(:), dnq(:), PE(:,:), Ik(:,:)
 
   ! bl    -- result of binned bispectrum
   double precision, intent(out) :: bl
 
   ![internal]
   integer :: l1, l2, l3, i, zn
-  double precision :: norm, bisp, hlll, tot, bk, fh(3)
+  double precision :: norm, bisp, hlll, tot, bk, fh(3), F2(3)
 
   zn = size(k,dim=1)
 
@@ -450,6 +322,9 @@ subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
     do l2 = eL2(1), eL2(2)
       do l3 = eL3(1), eL3(2)
 
+        if (l1==0) cycle
+        if (l2==0) cycle
+        if (l3==0) cycle
         if (l3>l1+l2.or.l3<abs(l1-l2)) cycle
         if (l1>l2+l3.or.l1<abs(l2-l3)) cycle
         if (l2>l3+l1.or.l2<abs(l3-l1)) cycle
@@ -459,10 +334,29 @@ subroutine bispec_lens_bin(eL1,eL2,eL3,k,Pl,fac,abc,wp,ck,Dz,knl,m,btype,bl)
         !compute F2 kernel at each z, and take sum
         select case(btype)
         case ('lss')
+
           do i = 1, zn
-            fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
-            call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+
+            if (m=='RT') then
+              call F2_Kernel(k(i,[l1,l2,l3]),abc(:,i,l1),abc(:,i,l2),F2(1))
+              call F2_Kernel(k(i,[l2,l3,l1]),abc(:,i,l2),abc(:,i,l3),F2(2))
+              call F2_Kernel(k(i,[l3,l1,l2]),abc(:,i,l3),abc(:,i,l1),F2(3))
+              if (z(i)<9d0) then
+                call RTformula_1h(k(i,[l1,l2,l3])/knl(i),ns,s0*Dz(i),nef(i),bk)
+                bk = bk/h**6 + 2d0*Ik(i,l1)*Ik(i,l2)*Ik(i,l3)*((F2(1)+dnq(i)*k(i,l3)/knl(i))*PE(i,l1)*PE(i,l2) + (F2(2)+dnq(i)*k(i,l1)/knl(i))*PE(i,l2)*PE(i,l3) + (F2(3)+dnq(i)*k(i,l2)/knl(i))*PE(i,l3)*PE(i,l1))
+              else
+                bk = 2d0*(F2(1)*Pl(1,i,l1)*Pl(1,i,l2) + F2(2)*Pl(1,i,l2)*Pl(1,i,l3) + F2(3)*Pl(1,i,l3)*Pl(1,i,l1))
+              end if
+
+            else
+
+              fh = coeff_fih(k(i,l1)+k(i,l2)+k(i,l3),Dz(i),knl(i))
+              call bispec_matter(k(i,[l1,l2,l3]),reshape(Pl(:,i,[l1,l2,l3]),[2,3]),reshape(abc(:,i,[l1,l2,l3]),[3,3]),bk,fh,m)
+
+            end if
+
             bisp = bisp + fac(i) * bk
+
           end do
         case ('pbn')
           call bispec_postborn(l1,l2,l3,wp,ck,bisp)
@@ -651,6 +545,231 @@ function snr_xbisp(eL,k,Pl,cgg,ckk,fac,abc,wp,ck,btype,Dz,knl,m)  result(f)
 end function snr_xbisp
 
 
+subroutine bispec_matter(k,Pk,abc,bk,fh,model)
+  implicit none
+  !input
+  double precision, intent(in) :: k(3), Pk(2,3), abc(3,3)
+  double precision, intent(in), optional :: fh(3)
+  character(*), intent(in), optional :: model
+  !output
+  double precision, intent(out) :: bk
+  !internal
+  integer :: i
+  character(16) :: m = ''
+  double precision :: F2(3), p(3), PE(3)
+
+  if (present(model)) m = model
+  if (m/=''.and..not.present(fh)) stop 'error (bispec_matter): fh is required'
+
+  select case(m)
+  case('3B')
+
+    !p(1) = dsqrt( 7d0/10d0 * (1d0+3d0/7d0*1.008d0) )
+    !p(3) = dsqrt( 7d0/4d0 * (1d0-3d0/7d0*1.008d0) )
+    p(1) = 1.0011993d0 !Om^{-1/143} ~ 1.008
+    p(2) = 1d0
+    p(3) = 0.9969955d0
+    call F2_Kernel(k([1,2,3]),p,p,F2(1))
+    call F2_Kernel(k([2,3,1]),p,p,F2(2))
+    call F2_Kernel(k([3,1,2]),p,p,F2(3))
+    bk = fh(1) + fh(2)*(Pk(1,1)*Pk(1,2)+Pk(1,2)*Pk(1,3)+Pk(1,3)*Pk(1,1))/3d0 + fh(3)*2d0*(F2(1)*Pk(2,1)*Pk(2,2)+F2(2)*Pk(2,2)*Pk(2,3)+F2(3)*Pk(2,3)*Pk(2,1))
+
+  case default
+
+    call F2_Kernel(k([1,2,3]),abc(:,1),abc(:,2),F2(1))
+    call F2_Kernel(k([2,3,1]),abc(:,2),abc(:,3),F2(2))
+    call F2_Kernel(k([3,1,2]),abc(:,3),abc(:,1),F2(3))
+    bk = 2d0*(F2(1)*Pk(2,1)*Pk(2,2) + F2(2)*Pk(2,2)*Pk(2,3) + F2(3)*Pk(2,3)*Pk(2,1))
+
+  end select
+
+end subroutine bispec_matter
+
+
+subroutine Limber_k2l(chi,k,Pk,kl,Pl)
+! get k and P(k) at k=l/chi
+  implicit none
+  double precision, intent(in) :: chi(:), k(:), Pk(:,:)
+  double precision, intent(out) :: kl(:,:), Pl(:,:)
+  integer :: i, l, zn, kn, ln, id
+  double precision :: kk
+  !double precision, allocatable :: y2a(:)
+
+  zn = size(Pk,dim=1) !num of z points
+  kn = size(Pk,dim=2) !num of k points
+  ln = size(kl,dim=2) !num of multipole
+
+  do i = 1, zn
+    !allocate(y2a(kn))
+    !call spline(k,Pk(i,:),kn,0d0,0d0,y2a)
+    do l = 1, ln
+      kk = dble(l)/chi(i)
+      id = neighb(kk,k) !look for neighberest points
+      kl(i,l) = kk
+      !* linear interpolation
+      Pl(i,l) = Pk(i,id) + (Pk(i,id+1)-Pk(i,id))*(kk-k(id))/(k(id+1)-k(id))
+      !Pl(i,l) = splint(kk,k(i),Pk(i,:),y2a)
+    end do
+    !deallocate(y2a)
+  end do
+
+end subroutine Limber_k2l
+
+
+function W3j_approx(l1,l2,l3) result(f)
+! approximate W3j symbol
+  implicit none
+  double precision, intent(in) :: l1,l2,l3
+  double precision :: a1,a2,a3,b,f,Lh
+
+  if (mod(int(l1+l2+l3),2)/=0) then 
+    f = 0d0
+  else
+    Lh = dble(l1+l2+l3)*0.5d0
+    a1 = ((Lh-l1+0.5d0)/(Lh-l1+1d0))**(Lh-l1+0.25d0)
+    a2 = ((Lh-l2+0.5d0)/(Lh-l2+1d0))**(Lh-l2+0.25d0)
+    a3 = ((Lh-l3+0.5d0)/(Lh-l3+1d0))**(Lh-l3+0.25d0)
+    b = 1d0/((Lh-l1+1d0)*(Lh-l2+1d0)*(Lh-l3+1d0))**(0.25d0)
+    f = (-1d0)**Lh/dsqrt(2d0*pi) * exp(1.5d0)* (Lh+1d0)**(-0.25d0) * a1*a2*a3*b
+  end if
+
+end function W3j_approx
+
+
+subroutine F2_Kernel(k,abc1,abc2,F2,lambda,kappa)
+! F2 kernel
+  implicit none
+  double precision, intent(in) :: k(3), abc1(3), abc2(3)
+  double precision, intent(out) :: F2
+  double precision, intent(in), optional :: lambda, kappa
+  !internal
+  double precision :: ct, lam, kap
+
+  !MG extension
+  lam = 1d0; kap=1d0
+  if (present(lambda))  lam = lambda
+  if (present(kappa))   kap = kappa
+
+  !Kernel
+  ct = (k(3)**2-k(1)**2-k(2)**2)/(2d0*k(1)*k(2)) !cos(theta) of vectors k1 and k2
+  F2 = (kap-lam*2d0/7d0)*abc1(1)*abc2(1) + kap*(k(1)**2+k(2)**2)/(2d0*k(1)*k(2))*ct*abc1(2)*abc2(2) + lam*2d0/7d0*ct**2*abc1(3)*abc2(3)
+
+end subroutine F2_Kernel
+
+
+subroutine RTformula_1h(q,ns,sigma8,n_eff,bk)
+  implicit none
+  double precision, intent(in)  :: q(3), ns, sigma8, n_eff
+  double precision, intent(out) :: bk
+  integer :: i, imin(1), imax(1)
+  double precision :: kmin, kmax, kmid, r1, r2
+  double precision :: gamman, an, bn, cn, alphan, betan
+
+  !set kmin, kmax and r1, r2
+  kmin  = minval(q)
+  kmax  = maxval(q)
+  if (kmin==kmax) then
+    kmid = kmin
+  else
+    imax = minloc(q)
+    imin = maxloc(q)
+    do i = 1, 3
+      if (i/=imin(1).and.i/=imax(1)) kmid = q(i)
+    end do
+  end if
+  r1 = kmin/kmax
+  r2 = (kmid+kmin-kmax)/kmax
+
+  !coefficients
+  gamman = 10**(0.182+0.57*n_eff)
+  an = -2.167-2.944*log10(sigma8)-1.106*log10(sigma8)**2-2.865*log10(sigma8)**3-0.310*r1**gamman
+  bn = -3.428-2.681*log10(sigma8)+1.624*log10(sigma8)**2-0.095*log10(sigma8)**3
+  cn = 0.159-1.107*n_eff
+  alphan = -4.348 - 3.006*n_eff - 0.5745*n_eff**2 + 10.**(-0.9+0.2*n_eff)*r2**2
+  betan  = -1.731 - 2.845*n_eff - 1.4995*n_eff**2 - 0.2811*n_eff**3 + 0.007*r2
+
+  an = 10**an
+  bn = 10**bn
+  cn = 10**cn
+  alphan = 10**alphan
+  betan  = 10**betan
+  
+  if (alphan>1.-(2./3.)*ns)  alphan = 1.-(2./3.)*ns
+
+  bk = 1d0
+  do i = 1, 3
+    bk = bk * 1d0/(an*q(i)**alphan+bn*q(i)**betan) * 1d0/(1d0+1d0/(cn*q(i)))
+  end do
+
+end subroutine RTformula_1h
+
+
+subroutine RTformula_3h_funcs(q,h,om,sigma8,n_eff,Plin,Ik,PE,dnq)
+  implicit none
+  double precision, intent(in)  :: q(:), h, om, sigma8, n_eff, Plin(:)
+  double precision, intent(out) :: PE(:), IK(:), dnq
+  integer :: ki
+  double precision :: fn, gn, hn, mn, nn, mun, nun, pn, dn, en
+
+  fn  = -10.533 - 16.838*n_eff - 9.3048*n_eff**2 - 1.8263*n_eff**3
+  gn  = 2.787  + 2.405*n_eff + 0.4577*n_eff**2
+  hn  = -1.118 - 0.394*n_eff
+  mn  = -2.605 - 2.434*log10(sigma8) + 5.71*log10(sigma8)**2
+  nn  = -4.468 - 3.08*log10(sigma8) + 1.035*log10(sigma8)**2
+  mun = 15.312 + 22.977*n_eff + 10.9579*n_eff**2 + 1.6586*n_eff**3
+  nun = 1.347  + 1.246*n_eff  + 0.4525*n_eff**2
+  pn  = 0.071  - 0.433*n_eff
+  dn  = -0.483 + 0.892*log10(sigma8) - 0.086*om
+  en  = -0.632 + 0.646*n_eff
+
+  fn  = 10d0**fn
+  gn  = 10d0**gn
+  hn  = 10d0**hn
+  mn  = 10d0**mn
+  nn  = 10d0**nn
+  mun = 10d0**mun
+  nun = 10d0**nun
+  pn  = 10d0**pn
+  dn  = 10d0**dn
+  en  = 10d0**en
+
+  do ki = 1, size(PE)
+    PE(ki) = (1d0+fn*q(ki)**2)/(1d0+gn*q(ki)+hn*q(ki)**2)*Plin(ki) + (1d0/h**3)/(mn*q(ki)**mun+nn*q(ki)**nun) * 1d0/(1d0+1d0/(pn*q(ki))**3)
+    Ik(ki) = 1d0/(1d0+en*q(ki))
+  end do
+
+  dnq = dn
+
+
+end subroutine RTformula_3h_funcs
+
+
+subroutine bispec_postborn(l1,l2,l3,wp,ck,bisp)
+! compute lensing bispectrum from post-Born correction
+  implicit none
+  !I/O
+  integer, intent(in) :: l1, l2, l3
+  double precision, intent(in) :: wp(:,:), ck(:,:)
+  double precision, intent(out) :: bisp
+  !internal
+  double precision :: al1, al2, al3, l1l2, l2l3, l3l1
+  
+  al1  = dble(l1)
+  al2  = dble(l2)
+  al3  = dble(l3)
+  l1l2 = al3**2-al1**2-al2**2 ! 2L1*L2
+  l2l3 = al1**2-al2**2-al3**2
+  l3l1 = al2**2-al3**2-al1**2
+
+  !Post-Born correction: Eq.(4.4) of PL16
+  !wPp = dchi * W^2(chi,chi_s)/chi^2 * P_psi 
+  bisp =        l1l2/(2d0*al1**2*al2**2)*(l3l1*al1**4*sum(wp(:,l1)*ck(:,l2))+l2l3*al2**4*sum(wp(:,l2)*ck(:,l1)))
+  bisp = bisp + l2l3/(2d0*al2**2*al3**2)*(l1l2*al2**4*sum(wp(:,l2)*ck(:,l3))+l3l1*al3**4*sum(wp(:,l3)*ck(:,l2)))
+  bisp = bisp + l3l1/(2d0*al3**2*al1**2)*(l2l3*al3**4*sum(wp(:,l3)*ck(:,l1))+l1l2*al1**4*sum(wp(:,l1)*ck(:,l3)))
+
+end subroutine bispec_postborn
+
+
 function coeff_fih(Kl,Dz,knl)  result(f)
   implicit none
   double precision, intent(in) :: knl, Dz, Kl
@@ -717,7 +836,7 @@ end subroutine coeff_abc
 
 
 subroutine get_knl(k,PkL,knl)
-!* get k_NL
+! get k_NL
   implicit none
   double precision, intent(in) :: k(:), PkL(:,:)
   double precision, intent(out) :: knl(:)
@@ -732,7 +851,7 @@ subroutine get_knl(k,PkL,knl)
       if ( PkL(i,j)*k(j)**3/(2d0*pi**2) > 1d0 ) then
         goto 11
       else
-        knl(i) = k(j)
+        knl(i)  = k(j)
       end if
     end do
 11  continue

@@ -21,7 +21,7 @@ module myfunc
 
   !* cosmological parameters
   type cosmoparams !nu=On/Om
-    double precision :: H0=70d0, Ov=0.7d0, Om=0.3d0, Ok=0d0, w0=-1d0, wa=0d0, nu=4.38225537d-2
+    double precision :: H0=70d0, Ov=0.7d0, Om=0.3d0, Ok=0d0, w0=-1d0, wa=0d0, nu=4.38225537d-2, ns=0.9645d0
   end type cosmoparams
 
   !* local parameters
@@ -607,7 +607,7 @@ subroutine find_pknl_params(k,plin,rknl,rneff,rncur,nonlinear)
     call wint(k,plin,rmid,sig,d1,d2)
     diff = sig-1.0
     if (abs(diff).le.0.001) then
-      rknl = 1./rmid
+      rknl  = 1./rmid
       rneff = -3-d1
       rncur = -d2   
       exit
