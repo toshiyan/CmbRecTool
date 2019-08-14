@@ -75,28 +75,32 @@ subroutine bispec_lens_lss_init(cp,b,z,dz,zs,k,pkl0,oL,model,ftype,btype)
 
   !precompute knl
   allocate(b%knl(zn),b%q(zn,oL(2)))
-  call get_knl(k,pkl,b%knl)
-  do i = 1, zn
-    b%q(i,:) = b%kl(i,:)/b%knl(i)
-  end do
 
-  !* precompute F2-kernel coefficients a, b, c 
-  allocate(b%abc(3,zn,oL(2))); b%abc = 1d0
-  if (model=='SC'.or.model=='GM')  call coeff_abc(b,k,pkL,model)
+  select case(model)
+  case ('SC','GM','3B')
 
-  !* RT
-  if (model=='RT') then
+    call get_knl(k,pkl,b%knl)
+    do i = 1, zn
+      b%q(i,:) = b%kl(i,:)/b%knl(i)
+    end do
+
+    allocate(b%abc(3,zn,oL(2))); b%abc = 1d0
+    if (model=='SC'.or.model=='GM')  call coeff_abc(b,k,pkL,model)
+
+  case ('RT')
+
     allocate(b%dnq(zn),b%PE(zn,oL(2)),b%Ik(zn,oL(2)),b%n(zn)); b%dnq=1d0; b%PE=1d0; b%Ik=1d0; b%n=1d0
     do i = 1, zn
+      om = omega_m(1d0/(1d0+z(i)),cp)
+      call find_pknl_params(k,pkL(i,:),b%knl(i),b%n(i),ncur,nonlinear)
+      if (z(i)>9d0)  b%knl(i) = 1d5
+      b%q(i,:) = b%kl(i,:)/b%knl(i)
       if (z(i)<=9d0) then
-        om = omega_m(1d0/(1d0+z(i)),cp)
-        call find_pknl_params(k,pkL(i,:),b%knl(i),b%n(i),ncur,nonlinear)
         call RTformula_3h_funcs(b%q(i,:),cp%h,om,b%sz(i),b%n(i),b%plL(i,:),b%Ik(i,:),b%PE(i,:),b%dnq(i))
       end if
     end do
-  end if
 
-  deallocate(b%knl,b%n,b%dnq,b%Ik,b%PE)
+  end select
 
 end subroutine bispec_lens_lss_init
 
@@ -151,7 +155,6 @@ subroutine bispec_lens_lss_kernel(cp,b,l1,l2,l3,bl,model)
   bl = 0d0
   do i = 1, zn
 
-    write(*,*) i
     select case (model)
     case('SC','GM','TR')
       call bispec_matter_9p(b%q(i,[l1,l2,l3]),b%pl(i,[l1,l2,l3]),reshape(b%abc(:,i,[l1,l2,l3]),[3,3]),bk,b%mgp(:,i))
@@ -159,9 +162,7 @@ subroutine bispec_lens_lss_kernel(cp,b,l1,l2,l3,bl,model)
       fh = coeff_fih(b%kl(i,l1)+b%kl(i,l2)+b%kl(i,l3),b%D(i),cp%h,b%knl(i))
       call bispec_matter_3B(b%q(i,[l1,l2,l3]),b%plL(i,[l1,l2,l3]),b%pl(i,[l1,l2,l3]),fh,bk)
     case('RT')
-      write(*,*) '!'
       fh = b%dnq(i)*b%q(i,[l1,l2,l3])
-      write(*,*) '!'
       call bispec_matter_RT(cp,b%q(i,[l1,l2,l3]),b%plL(i,[l1,l2,l3]),b%z(i),b%sz(i),b%n(i),b%Ik(i,l1)*b%Ik(i,l2)*b%Ik(i,l3),b%PE(i,[l1,l2,l3]),fh,bk)
     end select
 
@@ -567,16 +568,16 @@ end subroutine set_three_ells
 
 !//// binned bispectrum ////!
 
-subroutine bispec_lens_bin(cp,b,eL1,eL2,eL3,wp,ck,m,btype,bl)
+subroutine bispec_lens_bin(cp,b,eL1,eL2,eL3,wp,ck,m,bl0,bl1)
 ! reduced bispectrum with flat binning
   !I/O
   implicit none
   type(cosmoparams), intent(in) :: cp
   type(bispecfunc), intent(in) :: b
-  character(*), intent(in) :: btype, m
+  character(*), intent(in) :: m
   integer, intent(in) :: eL1(2), eL2(2), eL3(2)
   double precision, intent(in) :: wp(:,:), ck(:,:)
-  double precision, intent(out) :: bl(2)
+  double precision, intent(out) :: bl0, bl1
   !internal
   integer :: l1, l2, l3, zn
   double precision :: norm, bisp(2), hlll, tot(2)
@@ -611,7 +612,8 @@ subroutine bispec_lens_bin(cp,b,eL1,eL2,eL3,wp,ck,m,btype,bl)
     end do
   end do
 
-  bl = tot/norm
+  bl0 = tot(1)/norm
+  bl1 = tot(2)/norm
 
 end subroutine bispec_lens_bin
 
