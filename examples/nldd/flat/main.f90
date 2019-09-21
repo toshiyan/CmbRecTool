@@ -41,8 +41,9 @@ program main
 
   !Main Calculations
   allocate(Ag(oL(2)),Ac(oL(2)),At(oL(2)),Ar(oL(2))); Ag=0d0; Ac=0d0; At=0d0; Ar=0d0
-  call alxy_flat('TB',rL,oL,Ag,Ac,LC(EE,:),W(1,:),W(3,:),weight='rotation')
-  call alxy_flat('TT',rL,oL,At,Ar,LC(TT,:),W(1,:),W(1,:),weight='patchytau')
+  !call alxy_flat('TB',rL,oL,Ag,Ac,LC(EE,:),W(1,:),W(3,:),weight='rotation')
+  !call alxy_flat('TT',rL,oL,At,Ar,LC(TT,:),W(1,:),W(1,:),weight='patchytau')
+  call alxy_flat('EB',rL,oL,At,Ar,LC(EE,:),W(2,:),W(3,:),weight='patchytau')
   call savetxt('al.dat',linspace(2,oL(2),oL(2)-1),Ag(2:),Ac(2:),At(2:),Ar(2:),ow=.true.)
   deallocate(Ag,Ac,At,Ar,W,LC,UC)
 
