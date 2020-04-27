@@ -1,0 +1,151 @@
+1,5c1,2
+< !////////////////////////////////////////////////////!
+< ! * Kernel Functions of Normalization
+< !////////////////////////////////////////////////////!
+< 
+< subroutine Kernels_Tau(rL,WA,WB,X,kernel,gln,gle)
+---
+> subroutine Kernels_tau(rL,eL,WA,WB,X,kernel,gln,gle)
+> !Kernels of lensing reconstruction noise
+9c6
+<   integer, intent(in) :: rL(2)
+---
+>   integer, intent(in) :: rL(1:2), eL(1:2)
+16,17c13,15
+<   integer :: i, l, lmax, gn
+<   double precision :: mu, II, al, c1_inv, c3, ge
+---
+>   character(LEN=4) :: selec
+>   integer :: i, l, gn
+>   double precision :: pm, mu, Ip, Im, al, c1_inv, c3, ge
+19,22c17,18
+<   double precision, dimension(2) :: ZA00, ZB00, ZA22, ZB22
+< 
+<   !* initialize
+<   lmax = size(X)
+---
+>   double precision, dimension(2) :: ZA00
+>   double precision, dimension(2) :: ZB00
+27c23
+<   gn = int((3*max(rL(2),lmax)+1)/2)
+---
+>   gn = int((3*max(rL(2),eL(2))+1)/2)
+31c27
+<   call gl_initialize(GL,gn,ge)
+---
+>   call gl_initialize(GL,gln,gle)
+35,36c31,36
+<     select case(kernel)
+<     case ('S0','G0')
+---
+>     select case(selec)
+>     case ('S0')
+>       call ZETA(0,0,rL,WA,mu,ZA00)
+>       call ZETA(0,0,rL,WB,mu,ZB00)
+>       Ip = ZA00(1)*ZB00(1)
+>     case ('G0') !same as S0
+39c39
+<       II = 2d0*ZA00(1)*ZB00(1)
+---
+>       Ip = ZA00(1)*ZB00(1)
+43c43
+<     do l = 1, lmax ! loop for l
+---
+>     do l = 1, eL(2) ! loop for l
+56c56
+<       X(l) = X(l) + II*d00_sup(1)*GL%w(i)*pi
+---
+>       X(l) = X(l) + Ip*d00_sup(1)*GL%w(i)*2d0*pi
+64c64
+< end subroutine Kernels_Tau
+---
+> end subroutine Kernels_tau
+67,78c67
+< subroutine qtt(lmax,rlmin,rlmax,fC,OCT,At)
+< !*  Normalization of reconstructed amplitude modulation from the temperature quadratic estimator
+< !*
+< !*  Args:
+< !*    :lmax (int)        : Maximum multipole of output normalization spectrum
+< !*    :rlmin/rlmax (int) : Minimum/Maximum multipole of CMB for reconstruction
+< !*    :fC [l] (double)   : Theory TT spectrum, with bounds (0:rlmax)
+< !*    :OCT [l] (double)  : Observed TT spectrum, with bounds (0:rlmax)
+< !*
+< !*  Returns:
+< !*    :At [l] (double) : tau normalization, with bounds (0:lmax)
+< !*
+---
+> subroutine AlTT_tau(rL,eL,Att,fC,OCTT,ITT,gln,gle)
+81,83c70,75
+<   integer, intent(in) :: lmax, rlmin, rlmax
+<   double precision, intent(in), dimension(0:rlmax) :: fC, OCT
+<   double precision, intent(out), dimension(0:lmax) :: At
+---
+>   integer, intent(in) :: rL(2), eL(2)
+>   integer, intent(in), optional :: gln
+>   double precision, intent(in), optional :: gle
+>   double precision, intent(in), dimension(:) :: fC
+>   double precision, intent(in), dimension(:), optional :: OCTT, ITT
+>   double precision, intent(out), dimension(:) :: Att
+85,87c77,80
+<   integer :: rL(2), l
+<   double precision, dimension(rlmin:rlmax) :: W1, W2
+<   double precision, dimension(min(2*rlmax,lmax)) :: S0, G0
+---
+>   integer :: gn, oL(2)
+>   double precision :: ge
+>   double precision, dimension(rL(1):rL(2)) :: W1, W2
+>   double precision, dimension(min(2*rL(2),eL(2))) :: S0, G0
+89,90c82
+<   write(*,*) 'norm qTT (tau)'
+<   rL = (/rlmin,rlmax/)
+---
+>   write(*,*) 'TT'
+92,94c84,93
+<   do l = rlmin, rlmax
+<     if (OCT(l)==0d0) stop 'error (norm_tau.qtt): observed cltt is zero'
+<   end do
+---
+>   if (eL(1)<1)  stop 'error (altt_tau): lmin<1'
+> 
+>   !only compute nonzero values
+>   oL = [eL(1),min(2*rL(2),eL(2))]
+> 
+>   !accuracy for GL
+>   gn = int((3*max(rL(2),oL(2))+1)/2)
+>   ge = 1d-15
+>   if (present(gln)) gn = gln
+>   if (present(gle)) ge = gle
+97c96,98
+<   W1 = 1d0 / OCT(rlmin:rlmax)
+---
+>   if (present(OCTT)) W1 = 1d0 / OCTT(rL(1):rL(2))
+>   if (present(ITT))  W1 = ITT(rL(1):rL(2))
+>   if (.not.present(OCTT).and..not.present(ITT)) stop 'need OCTT or ITT'
+100c101
+<   W2 = W1 * fC(rlmin:rlmax)**2
+---
+>   W2 = W1 * fC(rL(1):rL(2))**2
+102c103
+<   call Kernels_tau(rL,W1,W2,S0,'S0')
+---
+>   call Kernels_tau(rL,oL,W1,W2,S0,'S0',gn,ge)
+104c105
+<   W2 = W1 * fC(rlmin:rlmax)
+---
+>   W2 = W1 * fC(rL(1):rL(2))
+106,113c107
+<   call Kernels_tau(rL,W2,W2,G0,'G0')
+< 
+<   At = 0d0
+<   do l = 1, lmax
+<     if (S0(l)+G0(l)/=0d0)  At(l) = 1d0/(S0(l)+G0(l))
+<   end do
+< 
+< end subroutine qtt
+---
+>   call Kernels_tau(rL,oL,W2,W2,G0,'G0',gn,ge)
+114a109,110
+>   Att = 0d0
+>   Att(oL(1):oL(2)) = 1d0/(S0(oL(1):oL(2))+G0(oL(1):oL(2)))
+115a112
+> end subroutine AlTT_tau
