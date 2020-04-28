@@ -33,8 +33,8 @@ $(target): $(OBJ)
 install:
 	mv *.mod ${MyLib}/mod; mv $(target) ${MyLib}/lib/
 
-#clean:
-#	rm -f *.o*
+clean:
+	rm -f *.o*
 
 nldd_interface.o: nldd_kernel.o
 nldd_ylm.o: nldd_interface.o

@@ -31,7 +31,7 @@ subroutine quadtt_tau_sym(nside,Tlm,fC,eL,rL,xlm)
   double precision, allocatable :: map(:,:)
   complex(dlc), allocatable :: alm(:,:,:)
 
-  write(*,*) 'calc TT-estimator (tau)'
+  write(*,*) 'calc TT-estimator (tau)', nside
   npix = 12*nside**2
 
   !* alm to map 
@@ -43,13 +43,14 @@ subroutine quadtt_tau_sym(nside,Tlm,fC,eL,rL,xlm)
   allocate(map(2,0:npix-1))
   call alm2map(nside,rL(2),rL(2),alm(1:1,:,:),map(1,:))
   call alm2map(nside,rL(2),rL(2),alm(2:2,:,:),map(2,:))
+  !map(1,:) = 1d0
   deallocate(alm)
 
   !* map to alm
   allocate(alm(1,0:eL(2),0:eL(2)))
   call map2alm(nside,eL(2),eL(2),map(1,:)*map(2,:),alm)
   xlm = 0d0
-  do l = 0, eL(2)
+  do l = 1, eL(2)
     xlm(l,0:l) = alm(1,l,0:l)
   end do
   deallocate(map,alm)
